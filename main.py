@@ -1,24 +1,53 @@
+import os
 import wave
-import pyaudio
-import numpy as np
+try:
+    import pyaudio
+except ImportError:
+    os.system("pip install pyaudio")
+    import pyaudio
+try:
+    import numpy as np
+except ImportError:
+    os.system("pip install numpy")
+    import numpy as np
 import threading
-import tkinter as tk
+try:
+    import tkinter as tk
+except ImportError:
+    os.system("pip install tkinter")
+    import tkinter as tk
 from tkinter import ttk
-from scipy.signal import lfilter
-import math
+try:
+    from scipy.signal import lfilter
+except ImportError:
+    os.system("pip install scipy")
+    from scipy.signal import lfilter
 
 # --- Shared State ---
 volume = 0.5
 bass_gain = 0.0
 treble_gain = 0.0
 running = True
-selected_device_index = None
+selected_device_index_1 = None
+selected_device_index_2 = None
+
 
 # --- WAV File ---
-WAV_FILE = "C:\\Users\\Logan\\Desktop\\[MP3DL.CC] Travis Scott - SICKO MODE (Audio)-320k.wav"  # Replace this with a valid WAV file
-
+AUDIO_FOLDER = "C:\\Users\\Logan\\Desktop"  # Change to the folder containing your .wav files
+WAV_FILE = None  # Default will be selected from list
 # --- Audio Setup ---
 p = pyaudio.PyAudio()
+
+def load_audio_files():
+    files = [f for f in os.listdir(AUDIO_FOLDER) if f.lower().endswith(".wav")]
+    return files
+
+def on_file_select(event):
+    global WAV_FILE
+    selection = file_listbox.curselection()
+    if selection:
+        filename = file_listbox.get(selection[0])
+        WAV_FILE = os.path.join(AUDIO_FOLDER, filename)
 
 def list_output_devices():
     devices = []
@@ -51,7 +80,6 @@ def biquad_shelf(data, rate, gain_db, freq, shelf_type):
         a2 = (A + 1) - (A - 1) * cos_w0 - 2 * np.sqrt(A) * alpha
     else:
         return data
-
     b = np.array([b0, b1, b2]) / a0
     a = np.array([1.0, a1 / a0, a2 / a0])
     return lfilter(b, a, data)
@@ -114,8 +142,18 @@ def on_play():
     if not selected_device_index:
         print("No output device selected.")
         return
+    if not WAV_FILE:
+        print("No audio file selected.")
+        return
+
+    # Stop current playback if running
+    running = False
+    threading.Event().wait(0.1)  # Small delay to allow thread to stop
+
+    # Start new playback
     running = True
-    threading.Thread(target=audio_thread, daemon=True).start()
+    threading.Thread(target=audio_thread, s=(1,), daemon=True).start()
+    threading.Thread(target=audio_thread, s=(1,), daemon=True).start()
 
 def on_close():
     global running
@@ -125,7 +163,7 @@ def on_close():
 # --- GUI Setup ---
 root = tk.Tk()
 root.title("Audio Player with EQ + Output Selection")
-root.geometry("350x300")
+root.geometry("350x400")
 
 # Device dropdown
 tk.Label(root, text="Output Device:").pack()
@@ -142,18 +180,33 @@ play_button.pack(pady=5)
 
 # Volume
 tk.Label(root, text="Volume").pack()
-tk.Scale(root, from_=0.0, to=2.0, resolution=0.1,
-         orient="horizontal", command=on_volume).set(0.5)
+volume_slider = tk.Scale(root, from_=0.0, to=10.0, resolution=0.1,
+                         orient="horizontal", command=on_volume)
+volume_slider.set(0.5)
+volume_slider.pack()
 
 # Bass
 tk.Label(root, text="Bass Boost (dB)").pack()
-tk.Scale(root, from_=-12, to=12, resolution=1,
-         orient="horizontal", command=on_bass).set(0)
+bass_slider = tk.Scale(root, from_=-12, to=12, resolution=1,
+                       orient="horizontal", command=on_bass)
+bass_slider.set(0)
+bass_slider.pack()
 
 # Treble
 tk.Label(root, text="Treble Boost (dB)").pack()
-tk.Scale(root, from_=-12, to=12, resolution=1,
-         orient="horizontal", command=on_treble).set(0)
+treble_slider = tk.Scale(root, from_=-12, to=12, resolution=1,
+                         orient="horizontal", command=on_treble)
+treble_slider.set(0)
+treble_slider.pack()
+
+tk.Label(root, text="Select Audio File:").pack()
+file_listbox = tk.Listbox(root, height=6)
+file_listbox.pack(pady=5)
+file_listbox.bind("<<ListboxSelect>>", on_file_select)
+
+# Load files into the listbox
+for file in load_audio_files():
+    file_listbox.insert(tk.END, file)
 
 root.protocol("WM_DELETE_WINDOW", on_close)
 root.mainloop()
