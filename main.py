@@ -206,8 +206,8 @@ def on_device_select(event):
             break
 
 def on_play():
-    global running
-    if not selected_device_index:
+    global running, current_frame, user_seeking
+    if selected_device_index is None:
         print("No output device selected.")
         return
     if not WAV_FILE:
@@ -216,11 +216,18 @@ def on_play():
 
     # Stop current playback if running
     running = False
-    threading.Event().wait(0.1)  # Small delay to allow thread to stop
+    threading.Event().wait(0.2)  # Slight delay for previous thread to exit
+
+    # Reset playback position and slider state
+    current_frame = 0
+    user_seeking = True   # Temporarily stop slider updates
+    scan_slider.set(0)
+    user_seeking = False  # Resume updates
 
     # Start new playback
     running = True
     threading.Thread(target=audio_thread, daemon=True).start()
+
 
 def on_close():
     global running
