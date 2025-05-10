@@ -1,5 +1,6 @@
 import os
 import wave
+os.system("pip install imageio[ffmpeg]")
 try:
     import pyaudio
 except ImportError:
@@ -22,7 +23,11 @@ try:
 except ImportError:
     os.system("pip install scipy")
     from scipy.signal import lfilter
-
+try:
+    import audioread
+except ImportError:
+    os.system("pip install audioread")
+    import audioread
 # --- Shared State ---
 volume = 0.5
 bass_gain = 0.0
@@ -37,8 +42,33 @@ WAV_FILE = None  # Default will be selected from list
 # --- Audio Setup ---
 p = pyaudio.PyAudio()
 
+def convert_mp3_to_wav(mp3_file):
+    with audioread.audio_open(mp3_file) as f:
+        # Get parameters
+        rate = f.samplerate
+        channels = f.channels
+        sampwidth = 2  # PCM 16-bit
+        frames = f.frames
+
+        # Create the output WAV file
+        with wave.open(AUDIO_FOLDER+mp3_file+".wav", 'wb') as out_f:
+            out_f.setnchannels(channels)
+            out_f.setsampwidth(sampwidth)
+            out_f.setframerate(rate)
+
+            # Read the MP3 data and write to the WAV file
+            while True:
+                try:
+                    samples = f.read_data()
+                    # Convert to numpy array and write as PCM
+                    pcm_samples = np.frombuffer(samples, dtype=np.int16)
+                    out_f.writeframes(pcm_samples.tobytes())
+                except audioread.exceptions.DecodeError:
+                    break
+    return AUDIO_FOLDER+mp3_file+".wav"
+
 def load_audio_files():
-    files = [f for f in os.listdir(AUDIO_FOLDER) if f.lower().endswith(".wav")]
+    files = [f for f in os.listdir(AUDIO_FOLDER) if (f.lower().endswith(".wav"))] #or f.lower().endswith(".mp3"))]
     return files
 
 def on_file_select(event):
@@ -85,8 +115,10 @@ def biquad_shelf(data, rate, gain_db, freq, shelf_type):
 
 # --- Audio Thread ---
 def audio_thread():
-    global running, volume, bass_gain, treble_gain, selected_device_index
-
+    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE
+    print(WAV_FILE[-4:])
+    if (WAV_FILE[-4:]==".mp3"):
+        WAV_FILE=convert_mp3_to_wav(WAV_FILE)
     wf = wave.open(WAV_FILE, 'rb')
     rate = wf.getframerate()
 
@@ -185,7 +217,7 @@ volume_slider.pack()
 
 # Bass
 tk.Label(root, text="Bass Boost (dB)").pack()
-bass_slider = tk.Scale(root, from_=-12, to=12, resolution=1,
+bass_slider = tk.Scale(root, from_=-15, to=15, resolution=1,
                        orient="horizontal", command=on_bass)
 bass_slider.set(0)
 bass_slider.pack()
