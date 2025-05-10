@@ -28,8 +28,7 @@ volume = 0.5
 bass_gain = 0.0
 treble_gain = 0.0
 running = True
-selected_device_index_1 = None
-selected_device_index_2 = None
+selected_device_index = None
 
 
 # --- WAV File ---
@@ -152,8 +151,7 @@ def on_play():
 
     # Start new playback
     running = True
-    threading.Thread(target=audio_thread, s=(1,), daemon=True).start()
-    threading.Thread(target=audio_thread, s=(1,), daemon=True).start()
+    threading.Thread(target=audio_thread, daemon=True).start()
 
 def on_close():
     global running
@@ -180,7 +178,7 @@ play_button.pack(pady=5)
 
 # Volume
 tk.Label(root, text="Volume").pack()
-volume_slider = tk.Scale(root, from_=0.0, to=10.0, resolution=0.1,
+volume_slider = tk.Scale(root, from_=0.0, to=5.0, resolution=0.05,
                          orient="horizontal", command=on_volume)
 volume_slider.set(0.5)
 volume_slider.pack()

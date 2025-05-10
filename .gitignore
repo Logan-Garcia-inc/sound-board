@@ -2,3 +2,4 @@ test.*
 *.test
 .vscode/*
 !.vscode/launch.json
+push.bat
