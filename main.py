@@ -1,6 +1,6 @@
 import os
 import wave
-os.system("pip install imageio[ffmpeg]")
+#os.system("pip install imageio[ffmpeg]")
 try:
     import pyaudio
 except ImportError:
