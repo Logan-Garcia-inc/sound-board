@@ -30,15 +30,10 @@ try:
 except ImportError:
     os.system("pip install scipy")
     from scipy.signal import lfilter
-try:
-    import audioread
-except ImportError:
-    os.system("pip install audioread")
-    import audioread
 # --- Shared State ---
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-os.environ["PATH"] += os.pathsep + r"C:\Program Files\ffmpeg-7.1.1-essentials_build\bin"
+os.environ["PATH"] += os.pathsep + script_dir
 AudioSegment.converter =  os.path.join(script_dir, "ffmpeg.exe")
 AudioSegment.ffprobe = os.path.join(script_dir, "ffprobe.exe")
 volume = 0.5
