@@ -1,4 +1,4 @@
-AUDIO_FOLDER = "C:\\Users\\Logan\\Desktop"  # Change to the folder containing your audio files
+AUDIO_FOLDER = r"C:\Users\Logan\Desktop"  # Change to the folder containing your audio files
 
 import os
 import wave
