@@ -1,6 +1,13 @@
 import os
 import wave
-#os.system("pip install imageio[ffmpeg]")
+os.system("pip install ffmpeg-python")
+try:
+    from pydub import AudioSegment
+    from pydub.utils import which
+except ImportError:
+    os.system("pip install pydub")
+    from pydub import AudioSegment
+    from pydub.utils import which
 try:
     import pyaudio
 except ImportError:
@@ -29,6 +36,11 @@ except ImportError:
     os.system("pip install audioread")
     import audioread
 # --- Shared State ---
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+os.environ["PATH"] += os.pathsep + r"C:\Program Files\ffmpeg-7.1.1-essentials_build\bin"
+AudioSegment.converter = r"C:\\Program Files\\ffmpeg-7.1.1-essentials_build\\bin\\ffmpeg.exe"
+AudioSegment.ffprobe = r"C:\\Program Files\\ffmpeg-7.1.1-essentials_build\\bin\\ffprobe.exe"
 volume = 0.5
 bass_gain = 0.0
 treble_gain = 0.0
@@ -37,41 +49,24 @@ scan_slider = None
 user_seeking = False
 running = True
 selected_device_index = None
-
+convertedFiles=[]
 
 # --- WAV File ---
 AUDIO_FOLDER = "C:\\Users\\Logan\\Desktop"  # Change to the folder containing your .wav files
 WAV_FILE = None  # Default will be selected from list
 # --- Audio Setup ---
-p = pyaudio.PyAudio()
+p = pyaudio.PyAudio()    
 
-def convert_mp3_to_wav(mp3_file):
-    with audioread.audio_open(mp3_file) as f:
-        # Get parameters
-        rate = f.samplerate
-        channels = f.channels
-        sampwidth = 2  # PCM 16-bit
-        frames = f.frames
-
-        # Create the output WAV file
-        with wave.open(AUDIO_FOLDER+mp3_file+".wav", 'wb') as out_f:
-            out_f.setnchannels(channels)
-            out_f.setsampwidth(sampwidth)
-            out_f.setframerate(rate)
-
-            # Read the MP3 data and write to the WAV file
-            while True:
-                try:
-                    samples = f.read_data()
-                    # Convert to numpy array and write as PCM
-                    pcm_samples = np.frombuffer(samples, dtype=np.int16)
-                    out_f.writeframes(pcm_samples.tobytes())
-                except audioread.exceptions.DecodeError:
-                    break
-    return AUDIO_FOLDER+mp3_file+".wav"
+def convert_mp3_to_wav(mp3_file_path):
+    wav_file_path = script_dir+"\\"+os.path.basename(mp3_file_path) + ".convertedTo.wav"
+    print(wav_file_path)
+    sound = AudioSegment.from_mp3(mp3_file_path)
+    sound.export(wav_file_path, format="wav")
+    convertedFiles.append(wav_file_path)
+    return wav_file_path
 
 def load_audio_files():
-    files = [f for f in os.listdir(AUDIO_FOLDER) if (f.lower().endswith(".wav"))] #or f.lower().endswith(".mp3"))]
+    files = [f for f in os.listdir(AUDIO_FOLDER) if (f.lower().endswith(".wav")or f.lower().endswith(".mp3"))]
     return files
 
 def on_file_select(event):
@@ -228,10 +223,21 @@ def on_play():
     running = True
     threading.Thread(target=audio_thread, daemon=True).start()
 
-
 def on_close():
-    global running
+    global running, WAV_FILE,converteFiles
     running = False
+    threading.Event().wait(0.2)
+    # Delete the converted .wav file if it exists
+    print(convertedFiles)
+    for i in convertedFiles:
+        print(i)
+        if i.endswith(".convertedTo.wav") and os.path.exists(i):
+            try:
+                os.remove(WAV_FILE)
+                print(f"Deleted temporary file: {WAV_FILE}")
+            except Exception as e:
+                print(f"Failed to delete {WAV_FILE}: {e}")
+
     root.destroy()
 
 # --- GUI Setup ---
