@@ -3,7 +3,7 @@
 setlocal
 
 :: Set the URL and destination path
-set "URL=https://github.com/Logan-Garcia-inc/sound-board/raw/refs/heads/main/main.py"
+set "https://github.com/Logan-Garcia-inc/sound-board/raw/refs/heads/main/soundboard/main.py"
 set "DEST=%~dp0main.py"
 
 echo Downloading file from %URL%...
