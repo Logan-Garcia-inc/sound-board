@@ -1,4 +1,4 @@
-AUDIO_FOLDER = r"C:\Users\Logan\Desktop"  # Change to the folder containing your audio files
+AUDIO_FOLDER = r"C:\\Users\\Logan\\Music\\"  # Change to the folder containing your audio files
 
 import os
 import wave
@@ -73,10 +73,10 @@ def on_file_select(event):
 
 def list_output_devices():
     devices = []
-    for i in range(p.get_device_count()):
-        info = p.get_device_info_by_index(i)
+    for f in range(p.get_device_count()):
+        info = p.get_device_info_by_index(f)
         if info["maxOutputChannels"] > 0:
-            devices.append((i, info["name"]))
+            devices.append((f, info["name"]))
     return devices
 
 # --- EQ Filters ---
@@ -115,10 +115,13 @@ def audio_thread():
     rate = wf.getframerate()
 
     stream = p.open(format=pyaudio.paInt16,
-                    channels=wf.getnchannels(),
-                    rate=rate,
-                    output=True,
-                    output_device_index=selected_device_index)
+                channels=wf.getnchannels(),
+                rate=rate,
+                output=True,
+                output_device_index=selected_device_index,
+                frames_per_buffer=1024,
+                stream_callback=None,
+                start=True)
 
     chunk = 1024
     data = wf.readframes(chunk)
@@ -127,7 +130,7 @@ def audio_thread():
     def update_slider():
         if not user_seeking:
             scan_slider.set(current_frame * 100 / total_frames)
-        root.after(200, update_slider)
+        root.after(10, update_slider)
 
     update_slider()
 
@@ -206,7 +209,7 @@ def on_play():
 
     # Stop current playback if running
     running = False
-    threading.Event().wait(0.2)  # Slight delay for previous thread to exit
+    threading.Event().wait(0.25)  # Slight delay for previous thread to exit
 
     # Reset playback position and slider state
     current_frame = 0
@@ -219,19 +222,18 @@ def on_play():
     threading.Thread(target=audio_thread, daemon=True).start()
 
 def on_close():
-    global running, WAV_FILE,convertedFiles
+    global running, WAV_FILE, convertedFiles
     running = False
     threading.Event().wait(0.2)
+    files = [f for f in os.listdir(script_dir) if f.endswith("mp3.convertedTo.wav")]
     # Delete the converted .wav file if it exists
-    print(convertedFiles)
-    for i in convertedFiles:
-        print(i)
-        if i.endswith(".convertedTo.wav") and os.path.exists(i):
+    for f in files:
+        if os.path.exists(os.path.join(script_dir,f)):
             try:
-                os.remove(i)
-                print(f"Deleted temporary file: {i}")
+                os.remove(os.path.join(script_dir,f))
+                print(f"Deleted temporary file: {f}")
             except Exception as e:
-                print(f"Failed to delete {i}: {e}")
+                print(f"Failed to delete {f}: {e}")
 
     root.destroy()
 
@@ -250,7 +252,7 @@ device_dropdown.bind("<<ComboboxSelected>>", on_device_select)
 device_dropdown.pack(pady=5)
 
 # Play button
-play_button = tk.Button(root, text="Play", command=on_play)
+play_button = tk.Button(root, text="Play", command=on_close)
 play_button.pack(pady=5)
 
 # Volume
