@@ -228,10 +228,10 @@ def on_close():
         print(i)
         if i.endswith(".convertedTo.wav") and os.path.exists(i):
             try:
-                os.remove(WAV_FILE)
-                print(f"Deleted temporary file: {WAV_FILE}")
+                os.remove(i)
+                print(f"Deleted temporary file: {i}")
             except Exception as e:
-                print(f"Failed to delete {WAV_FILE}: {e}")
+                print(f"Failed to delete {i}: {e}")
 
     root.destroy()
 
