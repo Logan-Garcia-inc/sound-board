@@ -1,3 +1,5 @@
+AUDIO_FOLDER = "C:\\Users\\Logan\\Desktop"  # Change to the folder containing your audio files
+
 import os
 import wave
 os.system("pip install ffmpeg-python")
@@ -47,7 +49,6 @@ selected_device_index = None
 convertedFiles=[]
 
 # --- WAV File ---
-AUDIO_FOLDER = "C:\\Users\\Logan\\Desktop"  # Change to the folder containing your .wav files
 WAV_FILE = None  
 # --- Audio Setup ---
 p = pyaudio.PyAudio()    
