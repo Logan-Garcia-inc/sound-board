@@ -154,7 +154,6 @@ def audio_thread():
         stream.write(samples.tobytes())
 
         current_frame = wf.tell()
-
     stream.stop_stream()
     stream.close()
     wf.close()
