@@ -46,7 +46,7 @@ scan_slider = None
 user_seeking = False
 running = True
 selected_device_index = None
-convertedFiles=[]
+slider_update_id=None
 
 # --- WAV File ---
 WAV_FILE = None  
@@ -57,7 +57,6 @@ def convert_mp3_to_wav(mp3_file_path):
     wav_file_path = script_dir+"\\"+os.path.basename(mp3_file_path) + ".convertedTo.wav"
     sound = AudioSegment.from_mp3(mp3_file_path)
     sound.export(wav_file_path, format="wav")
-    convertedFiles.append(wav_file_path)
     return wav_file_path
 
 def load_audio_files():
@@ -105,6 +104,7 @@ def biquad_shelf(data, rate, gain_db, freq, shelf_type):
     b = np.array([b0, b1, b2]) / a0
     a = np.array([1.0, a1 / a0, a2 / a0])
     return lfilter(b, a, data)
+test=0
 
 # --- Audio Thread ---
 def audio_thread():
@@ -113,7 +113,6 @@ def audio_thread():
         WAV_FILE=convert_mp3_to_wav(WAV_FILE)
     wf = wave.open(WAV_FILE, 'rb')
     rate = wf.getframerate()
-
     stream = p.open(format=pyaudio.paInt16,
                 channels=wf.getnchannels(),
                 rate=rate,
@@ -128,15 +127,16 @@ def audio_thread():
 
     total_frames = wf.getnframes()
     def update_slider():
+        global slider_update_id
         if not user_seeking:
             scan_slider.set(current_frame * 100 / total_frames)
-        root.after(10, update_slider)
+        slider_update_id = root.after(20, update_slider)  # ~50fps is plenty
 
     update_slider()
 
     while current_frame < total_frames and running:
         if user_seeking:
-            threading.Event().wait(0.1)
+            threading.Event().wait(0.2)
             continue
 
         wf.setpos(current_frame)
@@ -215,13 +215,17 @@ def on_play():
     user_seeking = True   # Temporarily stop slider updates
     scan_slider.set(0)
     user_seeking = False  # Resume updates
+    global slider_update_id
+    if slider_update_id is not None:
+        root.after_cancel(slider_update_id)
+        slider_update_id = None
 
     # Start new playback
     running = True
     threading.Thread(target=audio_thread, daemon=True).start()
 
 def on_close():
-    global running, WAV_FILE, convertedFiles
+    global running, WAV_FILE
     running = False
     threading.Event().wait(0.2)
     files = [f for f in os.listdir(script_dir) if f.endswith("mp3.convertedTo.wav")]
@@ -251,7 +255,7 @@ device_dropdown.bind("<<ComboboxSelected>>", on_device_select)
 device_dropdown.pack(pady=5)
 
 # Play button
-play_button = tk.Button(root, text="Play", command=on_close)
+play_button = tk.Button(root, text="Play", command=on_play)
 play_button.pack(pady=5)
 
 # Volume
