@@ -1,4 +1,3 @@
-test.*
 *.test
 .vscode/*
 !.vscode/launch.json
