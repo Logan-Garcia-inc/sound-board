@@ -1,5 +1,4 @@
-AUDIO_FOLDER = r"C:\\Users\\Logan\\Music\\"  # Change to the folder containing your audio files
-
+AUDIO_FOLDER = "C:\\Users\\Logan Garcia\\Music"  # Change to the folder containing your audio files
 import os
 import wave
 os.system("pip install ffmpeg-python")
@@ -8,6 +7,7 @@ try:
     from pydub.utils import which
 except ImportError:
     os.system("pip install pydub")
+    os.system("pip install audioop-lts")
     from pydub import AudioSegment
     from pydub.utils import which
 try:
@@ -104,7 +104,6 @@ def biquad_shelf(data, rate, gain_db, freq, shelf_type):
     b = np.array([b0, b1, b2]) / a0
     a = np.array([1.0, a1 / a0, a2 / a0])
     return lfilter(b, a, data)
-test=0
 
 # --- Audio Thread ---
 def audio_thread():
@@ -222,6 +221,7 @@ def on_play():
 
     # Start new playback
     running = True
+    threading.Thread(target=audio_thread, daemon=True).start()
     threading.Thread(target=audio_thread, daemon=True).start()
 
 def on_close():
