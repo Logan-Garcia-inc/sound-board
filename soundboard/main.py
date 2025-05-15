@@ -46,7 +46,7 @@ scan_slider = None
 user_seeking = False
 running = True
 selected_device_index = None
-slider_update_id=No
+slider_update_id=None
 
 # --- WAV File ---
 WAV_FILE = None  
