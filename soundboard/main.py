@@ -60,9 +60,12 @@ def convert_mp3_to_wav(mp3_file_path):
     return wav_file_path
 
 def load_audio_files():
-    files = [f for f in os.listdir(AUDIO_FOLDER) if (f.lower().endswith(".wav") or f.lower().endswith(".mp3"))]
-    return files
-
+    try:
+        files = [f for f in os.listdir(AUDIO_FOLDER) if (f.lower().endswith(".wav") or f.lower().endswith(".mp3"))]
+        return files
+    except FileNotFoundError:
+        print("\nAudio directory path not accessable: "+AUDIO_FOLDER+"\nEdit path on line 1")
+        threading.Event().wait(5)
 def on_file_select(event):
     global WAV_FILE
     selection = file_listbox.curselection()
