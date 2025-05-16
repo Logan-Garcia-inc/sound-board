@@ -1,4 +1,5 @@
-AUDIO_FOLDER = "C:\\Users\\Logan Garcia\\Music"  # Change to the folder containing your audio files
+AUDIO_FOLDER = "C:\\Users\\Logan\\Music"  # Change to the folder containing your audio files
+
 import os
 import wave
 os.system("pip install ffmpeg-python")
@@ -64,8 +65,9 @@ def load_audio_files():
         files = [f for f in os.listdir(AUDIO_FOLDER) if (f.lower().endswith(".wav") or f.lower().endswith(".mp3"))]
         return files
     except FileNotFoundError:
-        print("\nAudio directory path not accessable: "+AUDIO_FOLDER+"\nEdit path on line 1")
+        print("\nAudio directory path not accessible: "+AUDIO_FOLDER+"\nEdit path on line 1")
         threading.Event().wait(5)
+
 def on_file_select(event):
     global WAV_FILE
     selection = file_listbox.curselection()
@@ -231,6 +233,7 @@ def on_close():
     global running, WAV_FILE
     running = False
     threading.Event().wait(0.2)
+    print()
     files = [f for f in os.listdir(script_dir) if f.endswith("mp3.convertedTo.wav")]
     # Delete the converted .wav file if it exists
     for f in files:
