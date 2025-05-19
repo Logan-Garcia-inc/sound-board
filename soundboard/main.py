@@ -1,4 +1,4 @@
-AUDIO_FOLDER = "C:\\Users\\Logan\\Music"  # Change to the folder containing your audio files
+AUDIO_FOLDER = "C:\\Users\\Logan Garcia\\Music"  # Change to the folder containing your audio files
 
 import os
 import wave
@@ -268,7 +268,7 @@ play_button.pack(pady=5)
 tk.Label(root, text="Volume").pack()
 volume_slider = tk.Scale(root, from_=0.0, to=3.0, resolution=0.01,
                          orient="horizontal", command=on_volume)
-volume_slider.set(0.5)
+volume_slider.set(1.0)
 volume_slider.pack()
 
 # Bass
