@@ -133,7 +133,7 @@ def audio_thread():
                 stream_callback=None,
                 start=True)
 
-    chunk = 2048
+    chunk = 1024
     data = wf.readframes(chunk)
 
     total_frames = wf.getnframes()
@@ -155,12 +155,12 @@ def audio_thread():
             break
 
         samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
-        # if speed != 1.0:
-        #     indices = np.arange(0, len(samples), speed)
-        #     indices = indices[indices < len(samples)]
-        #     samples = samples[indices.astype(int)]
         if speed != 1.0:
-            samples = librosa.effects.time_stretch(y=samples, rate=speed)
+             indices = np.arange(0, len(samples), speed)
+             indices = indices[indices < len(samples)]
+             samples = samples[indices.astype(int)]
+        #if speed != 1.0:
+         #   samples = librosa.effects.time_stretch(y=samples, rate=speed)
 
         samples = biquad_shelf(samples, rate, bass_gain, 200, "low")
         samples = biquad_shelf(samples, rate, treble_gain, 4000, "high")
@@ -214,8 +214,13 @@ def on_device_select(event):
             break
 
 def on_speed(val):
+    val=float(val)
+    if abs(val - 1.0) <= 0.02:
+        val = 1.0
+        speed_slider.set(1.0)
     global speed
-    speed = float(val)
+    speed = val
+    
 
 def on_play():
     global running, current_frame, user_seeking
@@ -304,7 +309,7 @@ tk.Label(root, text="Treble Boost (dB)").pack(pady=(4, 0))
 #speed
 
 speed_slider = tk.Scale(
-    root, from_=0.5, to=2.0, resolution=0.05,
+    root, from_=0.5, to=2.0, resolution=0.01,
     orient="horizontal",
     command=lambda v: on_speed(float(v))
 )
