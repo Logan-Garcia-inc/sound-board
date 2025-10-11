@@ -33,6 +33,12 @@ try:
 except ImportError:
     os.system("pip install scipy")
     from scipy.signal import lfilter
+try:
+    import librosa
+except ImportError:
+    os.system("pip install librossa")
+    import librosa
+
 # --- Shared State ---
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -43,6 +49,7 @@ volume = 0.5
 bass_gain = 0.0
 treble_gain = 0.0
 current_frame = 0
+speed = 1.0
 scan_slider = None
 user_seeking = False
 running = True
@@ -137,7 +144,6 @@ def audio_thread():
         slider_update_id = root.after(20, update_slider)  # ~50fps is plenty
 
     update_slider()
-
     while current_frame < total_frames and running:
         if user_seeking:
             threading.Event().wait(0.2)
@@ -149,6 +155,12 @@ def audio_thread():
             break
 
         samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
+        # if speed != 1.0:
+        #     indices = np.arange(0, len(samples), speed)
+        #     indices = indices[indices < len(samples)]
+        #     samples = samples[indices.astype(int)]
+        if speed != 1.0:
+            samples = librosa.effects.time_stretch(y=samples, rate=speed)
 
         samples = biquad_shelf(samples, rate, bass_gain, 200, "low")
         samples = biquad_shelf(samples, rate, treble_gain, 4000, "high")
@@ -200,6 +212,10 @@ def on_device_select(event):
         if dev == name:
             selected_device_index = idx
             break
+
+def on_speed(val):
+    global speed
+    speed = float(val)
 
 def on_play():
     global running, current_frame, user_seeking
@@ -284,6 +300,17 @@ treble_slider = tk.Scale(root, from_=-12, to=12, resolution=1,
                          orient="horizontal", command=on_treble)
 treble_slider.set(0)
 treble_slider.pack()
+
+#speed
+tk.Label(root, text="Playback Speed (x)").pack()
+speed_slider = tk.Scale(
+    root, from_=0.5, to=2.0, resolution=0.05,
+    orient="horizontal",
+    command=lambda v: on_speed(float(v))
+)
+speed_slider.set(1.0)
+speed_slider.pack()
+
 
 tk.Label(root, text="Select Audio File:").pack()
 file_listbox = tk.Listbox(root, height=6)
