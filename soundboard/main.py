@@ -194,8 +194,12 @@ def on_slider_end(event):
 
 # --- GUI Handlers ---
 def on_volume(val):
+    val=float(val)
+    if abs(val - 1.0) <= 0.02:
+        val = 1.0
+        volume_slider.set(1.0)
     global volume
-    volume = float(val)
+    volume = val
 
 def on_bass(val):
     global bass_gain
