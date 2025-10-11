@@ -1,4 +1,4 @@
-AUDIO_FOLDER = "C:\\Users\\Logan Garcia\\Music"  # Change to the folder containing your audio files
+AUDIO_FOLDER = r"C:\Users\Logan\Music"  # Change to the folder containing your audio files
 
 import os
 import wave
@@ -36,7 +36,7 @@ except ImportError:
 try:
     import librosa
 except ImportError:
-    os.system("pip install librossa")
+    os.system("pip install librosa")
     import librosa
 
 # --- Shared State ---
@@ -133,7 +133,7 @@ def audio_thread():
                 stream_callback=None,
                 start=True)
 
-    chunk = 1024
+    chunk = 2048
     data = wf.readframes(chunk)
 
     total_frames = wf.getnframes()
@@ -265,7 +265,7 @@ def on_close():
 # --- GUI Setup ---
 root = tk.Tk()
 root.title("Audio Player with EQ + Output Selection")
-root.geometry("350x500")
+root.geometry("350x570")
 
 # Device dropdown
 tk.Label(root, text="Output Device:").pack()
@@ -278,50 +278,50 @@ device_dropdown.pack(pady=5)
 
 # Play button
 play_button = tk.Button(root, text="Play", command=on_play)
-play_button.pack(pady=5)
+play_button.pack(pady=4)
 
 # Volume
-tk.Label(root, text="Volume").pack()
+
 volume_slider = tk.Scale(root, from_=0.0, to=3.0, resolution=0.01,
                          orient="horizontal", command=on_volume)
 volume_slider.set(1.0)
 volume_slider.pack()
-
+tk.Label(root, text="Volume").pack(pady=(4, 0))
 # Bass
-tk.Label(root, text="Bass Boost (dB)").pack()
+
 bass_slider = tk.Scale(root, from_=-15, to=15, resolution=1,
                        orient="horizontal", command=on_bass)
 bass_slider.set(0)
 bass_slider.pack()
-
+tk.Label(root, text="Bass Boost (dB)").pack(pady=(4, 0))
 # Treble
-tk.Label(root, text="Treble Boost (dB)").pack()
+
 treble_slider = tk.Scale(root, from_=-12, to=12, resolution=1,
                          orient="horizontal", command=on_treble)
 treble_slider.set(0)
 treble_slider.pack()
-
+tk.Label(root, text="Treble Boost (dB)").pack(pady=(4, 0))
 #speed
-tk.Label(root, text="Playback Speed (x)").pack()
+
 speed_slider = tk.Scale(
     root, from_=0.5, to=2.0, resolution=0.05,
     orient="horizontal",
     command=lambda v: on_speed(float(v))
 )
 speed_slider.set(1.0)
-speed_slider.pack()
+speed_slider.pack(pady=6)
+tk.Label(root, text="Playback Speed (x)").pack(pady=(4, 0))
 
 
-tk.Label(root, text="Select Audio File:").pack()
+tk.Label(root, text="Select Audio File:").pack(pady=(10, 0))
 file_listbox = tk.Listbox(root, height=6)
-file_listbox.pack(pady=5)
+file_listbox.pack(pady=6)
 file_listbox.bind("<<ListboxSelect>>", on_file_select)
-
 # Load files into the listbox
 for file in load_audio_files():
     file_listbox.insert(tk.END, file)
 
-tk.Label(root, text="Scan Audio").pack()
+tk.Label(root, text="Scan Audio").pack(pady=(4, 0))
 scan_slider = tk.Scale(root, from_=0, to=100, orient="horizontal", command=on_slider_change)
 scan_slider.pack(fill="x", padx=10)
 
