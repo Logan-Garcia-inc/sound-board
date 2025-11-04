@@ -1,7 +1,9 @@
 AUDIO_FOLDER = r"C:\Users\Logan\Music"  # Change to the folder containing your audio files
 
 import os
+import io
 import wave
+import ffmpeg
 os.system("pip install ffmpeg-python")
 try:
     from pydub import AudioSegment
@@ -38,6 +40,11 @@ try:
 except ImportError:
     os.system("pip install librosa")
     import librosa
+try: 
+    import soundfile as sf
+except ImportError:
+    os.system('pip install soundfile')
+    import soundfile as sf
 
 # --- Shared State ---
 
@@ -117,12 +124,28 @@ def biquad_shelf(data, rate, gain_db, freq, shelf_type):
     a = np.array([1.0, a1 / a0, a2 / a0])
     return lfilter(b, a, data)
 
+def fast_speed_change(file_path, speed):
+    buf = io.BytesIO()
+    out, _ = (
+        ffmpeg.input(file_path)
+        .filter("atempo", speed)
+        .output("pipe:", format="wav")
+        .run(capture_stdout=True, capture_stderr=True)
+    )
+    buf.write(out)
+    buf.seek(0)
+    return buf
+
 # --- Audio Thread ---
 def audio_thread():
-    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE,current_frame
+    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE, current_frame
     if (WAV_FILE[-4:]==".mp3"):
         WAV_FILE=convert_mp3_to_wav(WAV_FILE)
     wf = wave.open(WAV_FILE, 'rb')
+    
+    if speed!=1:
+        temp_wav = fast_speed_change(WAV_FILE, speed)
+        wf = wave.open(temp_wav, 'rb')
     rate = wf.getframerate()
     stream = p.open(format=pyaudio.paInt16,
                 channels=wf.getnchannels(),
@@ -138,9 +161,10 @@ def audio_thread():
 
     total_frames = wf.getnframes()
     def update_slider():
-        global slider_update_id
+        global slider_update_id, current_frame
         if not user_seeking:
             scan_slider.set(current_frame * 100 / total_frames)
+            print(current_frame * 100 / total_frames)
         slider_update_id = root.after(20, update_slider)  # ~50fps is plenty
 
     update_slider()
@@ -155,10 +179,10 @@ def audio_thread():
             break
 
         samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
-        if speed != 1.0:
-             indices = np.arange(0, len(samples), speed)
-             indices = indices[indices < len(samples)]
-             samples = samples[indices.astype(int)]
+        # if speed != 1.0:
+        #      indices = np.arange(0, len(samples), speed)
+        #      indices = indices[indices < len(samples)]
+        #      samples = samples[indices.astype(int)]
         #if speed != 1.0:
          #   samples = librosa.effects.time_stretch(y=samples, rate=speed)
 
@@ -175,9 +199,13 @@ def audio_thread():
     wf.close()
 
 def on_slider_change(val):
-    global current_frame, user_seeking
+    global current_frame, user_seeking,WAV_FILE
     if WAV_FILE:
-        wf = wave.open(WAV_FILE, 'rb')
+        temp=WAV_FILE
+        print(speed)
+        if speed!=1.0:
+            temp = fast_speed_change(temp, speed)
+        wf = wave.open(temp, 'rb')
         total_frames = wf.getnframes()
         new_pos = int(float(val) / 100 * total_frames)
         current_frame = new_pos
@@ -190,6 +218,7 @@ def on_slider_start(event):
 def on_slider_end(event):
     global user_seeking
     user_seeking = False
+    on_slider_change(scan_slider.get())
 
 
 # --- GUI Handlers ---
@@ -224,9 +253,11 @@ def on_speed(val):
         speed_slider.set(1.0)
     global speed
     speed = val
+    if running:
+        on_play(restart=False)
     
 
-def on_play():
+def on_play(restart=True):
     global running, current_frame, user_seeking
     if selected_device_index is None:
         print("No output device selected.")
@@ -234,15 +265,15 @@ def on_play():
     if not WAV_FILE:
         print("No audio file selected.")
         return
-
     # Stop current playback if running
     running = False
     threading.Event().wait(0.25)  # Slight delay for previous thread to exit
 
     # Reset playback position and slider state
-    current_frame = 0
-    user_seeking = True   # Temporarily stop slider updates
-    scan_slider.set(0)
+    if restart:
+        current_frame = 0
+        user_seeking = True   # Temporarily stop slider updates
+        scan_slider.set(0)
     user_seeking = False  # Resume updates
     global slider_update_id
     if slider_update_id is not None:
@@ -252,7 +283,7 @@ def on_play():
     # Start new playback
     running = True
     threading.Thread(target=audio_thread, daemon=True).start()
-    threading.Thread(target=audio_thread, daemon=True).start()
+    #threading.Thread(target=audio_thread, daemon=True).start()
 
 def on_close():
     global running, WAV_FILE
@@ -274,7 +305,7 @@ def on_close():
 # --- GUI Setup ---
 root = tk.Tk()
 root.title("Audio Player with EQ + Output Selection")
-root.geometry("350x570")
+root.geometry("350x600")
 
 # Device dropdown
 tk.Label(root, text="Output Device:").pack()
@@ -315,8 +346,9 @@ tk.Label(root, text="Treble Boost (dB)").pack(pady=(4, 0))
 speed_slider = tk.Scale(
     root, from_=0.5, to=2.0, resolution=0.01,
     orient="horizontal",
-    command=lambda v: on_speed(float(v))
+    #command=lambda v: on_speed(float(v))
 )
+speed_slider.bind("<ButtonRelease-1>", lambda e: on_speed(float(speed_slider.get())))
 speed_slider.set(1.0)
 speed_slider.pack(pady=6)
 tk.Label(root, text="Playback Speed (x)").pack(pady=(4, 0))
@@ -331,7 +363,7 @@ for file in load_audio_files():
     file_listbox.insert(tk.END, file)
 
 tk.Label(root, text="Scan Audio").pack(pady=(4, 0))
-scan_slider = tk.Scale(root, from_=0, to=100, orient="horizontal", command=on_slider_change)
+scan_slider = tk.Scale(root, from_=0, to=100, orient="horizontal")#, command=on_slider_change)
 scan_slider.pack(fill="x", padx=10)
 
 # Bind mouse events to pause/resume seek
