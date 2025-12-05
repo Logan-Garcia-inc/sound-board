@@ -1,28 +1,15 @@
-AUDIO_FOLDER = r"C:\Users\Logan\Music"  # Change to the folder containing your audio files
+AUDIO_FOLDER = r"C:\Users\Logan Garcia\Music"  # Change to the folder containing your audio files
 
 import os
 import io
 import wave
 import ffmpeg
-os.system("pip install ffmpeg-python")
-try:
-    from pydub import AudioSegment
-    from pydub.utils import which
-except ImportError:
-    os.system("pip install pydub")
-    os.system("pip install audioop-lts")
-    from pydub import AudioSegment
-    from pydub.utils import which
-try:
-    import pyaudio
-except ImportError:
-    os.system("pip install pyaudio")
-    import pyaudio
-try:
-    import numpy as np
-except ImportError:
-    os.system("pip install numpy")
-    import numpy as np
+#os.system("pip install ffmpeg-python")
+from pydub import AudioSegment
+from pydub.utils import which
+
+import pyaudio
+import numpy as np
 import threading
 try:
     import tkinter as tk
@@ -321,9 +308,8 @@ play_button = tk.Button(root, text="Play", command=on_play)
 play_button.pack(pady=4)
 
 # Volume
-
 volume_slider = tk.Scale(root, from_=0.0, to=3.0, resolution=0.01,
-                         orient="horizontal", command=on_volume)
+        orient="horizontal", command=on_volume)
 volume_slider.set(1.0)
 volume_slider.pack()
 tk.Label(root, text="Volume").pack(pady=(4, 0))
