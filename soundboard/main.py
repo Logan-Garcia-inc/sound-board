@@ -1,6 +1,19 @@
-AUDIO_FOLDER = r"C:\Users\Logan Garcia\Music"  # Change to the folder containing your audio files
-
 import os
+
+AUDIO_FOLDER= os.path.expanduser("~")+"\\music"
+                    # Change to the folder containing your audio files
+try:
+    if not AUDIO_FOLDER:
+        AUDIO_FOLDER=input("Path to audio folder: ")
+        with open(os.path.abspath(__file__),"r") as file:
+            lines = file.readlines()
+        with open(os.path.abspath(__file__),"w") as file:
+            lines[1] =  f'AUDIO_FOLDER = "{AUDIO_FOLDER}"' +'\n'
+            file.writelines(lines)
+except Exception as e:
+    print(e)
+
+print(AUDIO_FOLDER)
 import io
 import wave
 import ffmpeg
