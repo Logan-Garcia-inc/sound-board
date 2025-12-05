@@ -1,5 +1,6 @@
 # sound-board
+**step 1
+pip install -r requirements.txt
 
-edit line 1 to set the folder containing audio files to play
-
-run update.bat to get the current file from github
+**step 2
+run soundboard.py and paste the path to your music folder.     eg "C:\Users\'User'\Music"
