@@ -3,3 +3,6 @@ pydub
 audioop-lts
 pyaudio
 numpy
+tkinter
+scipy
+librosa

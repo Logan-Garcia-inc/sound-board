@@ -24,22 +24,11 @@ from pydub.utils import which
 import pyaudio
 import numpy as np
 import threading
-try:
-    import tkinter as tk
-except ImportError:
-    os.system("pip install tkinter")
-    import tkinter as tk
+import tkinter as tk
 from tkinter import ttk
-try:
-    from scipy.signal import lfilter
-except ImportError:
-    os.system("pip install scipy")
-    from scipy.signal import lfilter
-try:
-    import librosa
-except ImportError:
-    os.system("pip install librosa")
-    import librosa
+from scipy.signal import lfilter
+import librosa
+
 try: 
     import soundfile as sf
 except ImportError:
