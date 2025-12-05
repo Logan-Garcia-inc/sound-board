@@ -301,7 +301,7 @@ tk.Label(root, text="Output Device:").pack()
 output_devices = list_output_devices()
 device_names = [name for _, name in output_devices]
 device_var = tk.StringVar()
-device_dropdown = ttk.Combobox(root, textvariable=device_var, values=device_names, state="readonly")
+device_dropdown = ttk.Combobox(root, textvariable=device_var, width=30, values=device_names, state="readonly")
 device_dropdown.bind("<<ComboboxSelected>>", on_device_select)
 device_dropdown.pack(pady=5)
 
@@ -311,21 +311,21 @@ play_button.pack(pady=4)
 
 # Volume
 volume_slider = tk.Scale(root, from_=0.0, to=3.0, resolution=0.01,
-        orient="horizontal", command=on_volume)
+        orient="horizontal",length=300, command=on_volume)
 volume_slider.set(1.0)
 volume_slider.pack()
 tk.Label(root, text="Volume").pack(pady=(4, 0))
 # Bass
 
 bass_slider = tk.Scale(root, from_=-15, to=15, resolution=1,
-                       orient="horizontal", command=on_bass)
+                       orient="horizontal",length=300, command=on_bass)
 bass_slider.set(0)
 bass_slider.pack()
 tk.Label(root, text="Bass Boost (dB)").pack(pady=(4, 0))
 # Treble
 
 treble_slider = tk.Scale(root, from_=-12, to=12, resolution=1,
-                         orient="horizontal", command=on_treble)
+                         orient="horizontal",length=300, command=on_treble)
 treble_slider.set(0)
 treble_slider.pack()
 tk.Label(root, text="Treble Boost (dB)").pack(pady=(4, 0))
@@ -333,7 +333,7 @@ tk.Label(root, text="Treble Boost (dB)").pack(pady=(4, 0))
 
 speed_slider = tk.Scale(
     root, from_=0.5, to=2.0, resolution=0.01,
-    orient="horizontal",
+    orient="horizontal",length=300,
     #command=lambda v: on_speed(float(v))
 )
 speed_slider.bind("<ButtonRelease-1>", lambda e: on_speed(float(speed_slider.get())))
@@ -343,7 +343,7 @@ tk.Label(root, text="Playback Speed (x)").pack(pady=(4, 0))
 
 
 tk.Label(root, text="Select Audio File:").pack(pady=(10, 0))
-file_listbox = tk.Listbox(root, height=6)
+file_listbox = tk.Listbox(root, height=6, width=35)
 file_listbox.pack(pady=6)
 file_listbox.bind("<<ListboxSelect>>", on_file_select)
 # Load files into the listbox
@@ -351,7 +351,7 @@ for file in load_audio_files():
     file_listbox.insert(tk.END, file)
 
 tk.Label(root, text="Scan Audio").pack(pady=(4, 0))
-scan_slider = tk.Scale(root, from_=0, to=100, orient="horizontal")#, command=on_slider_change)
+scan_slider = tk.Scale(root, from_=0, to=100,length=300, orient="horizontal")#, command=on_slider_change)
 scan_slider.pack(fill="x", padx=10)
 
 # Bind mouse events to pause/resume seek
