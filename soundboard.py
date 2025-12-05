@@ -50,8 +50,8 @@ except ImportError:
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.environ["PATH"] += os.pathsep + script_dir
-AudioSegment.converter =  os.path.join(script_dir, "ffmpeg.exe")
-AudioSegment.ffprobe = os.path.join(script_dir, "ffprobe.exe")
+AudioSegment.converter =  os.path.join(script_dir, "scripts\\ffmpeg.exe")
+AudioSegment.ffprobe = os.path.join(script_dir, "scripts\\ffprobe.exe")
 volume = 0.5
 bass_gain = 0.0
 treble_gain = 0.0
