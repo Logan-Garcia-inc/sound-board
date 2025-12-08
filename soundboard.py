@@ -1,26 +1,26 @@
 import os
-
 AUDIO_FOLDER= os.path.expanduser("~")+"\\music"
-                    # Change to the folder containing your audio files
+                #<------important white space
 try:
     if not AUDIO_FOLDER:
         AUDIO_FOLDER=input("Path to audio folder: ")
         with open(os.path.abspath(__file__),"r") as file:
             lines = file.readlines()
         with open(os.path.abspath(__file__),"w") as file:
-            lines[1] =  f'AUDIO_FOLDER = "{AUDIO_FOLDER}"' +'\n'
+            lines[2] =  f'AUDIO_FOLDER = "{AUDIO_FOLDER}"' +'\n'
             file.writelines(lines)
 except Exception as e:
     print(e)
 
 print(AUDIO_FOLDER)
 import io
+import random
 import wave
 import ffmpeg
 #os.system("pip install ffmpeg-python")
 from pydub import AudioSegment
 from pydub.utils import which
-
+import json
 import pyaudio
 import numpy as np
 import threading
@@ -28,12 +28,7 @@ import tkinter as tk
 from tkinter import ttk
 from scipy.signal import lfilter
 import librosa
-
-try: 
-    import soundfile as sf
-except ImportError:
-    os.system('pip install soundfile')
-    import soundfile as sf
+import soundfile as sf
 
 # --- Shared State ---
 
@@ -51,6 +46,12 @@ user_seeking = False
 running = True
 selected_device_index = None
 slider_update_id=None
+shuffle=False
+looping=False
+audioMapPath="audioMap.json"
+delete_temp_wav_files=False
+history=[]
+historyPosition=0
 
 # --- WAV File ---
 WAV_FILE = None  
@@ -58,9 +59,17 @@ WAV_FILE = None
 p = pyaudio.PyAudio()    
 
 def convert_mp3_to_wav(mp3_file_path):
-    wav_file_path = script_dir+"\\"+os.path.basename(mp3_file_path) + ".convertedTo.wav"
-    sound = AudioSegment.from_mp3(mp3_file_path)
-    sound.export(wav_file_path, format="wav")
+    global audioMapPath, audioMap
+    if mp3_file_path in audioMap.keys():
+        wav_file_path=audioMap[mp3_file_path]
+    else:
+        wav_file_path = script_dir+"\\"+os.path.basename(mp3_file_path) + ".convertedTo.wav"
+        sound = AudioSegment.from_mp3(mp3_file_path)
+        sound.export(wav_file_path, format="wav")
+        audioMap[mp3_file_path]=wav_file_path
+        with open(audioMapPath,"w") as file:
+            file.write(json.dumps(audioMap))
+    print(audioMap)
     return wav_file_path
 
 def load_audio_files():
@@ -125,9 +134,26 @@ def fast_speed_change(file_path, speed):
     buf.seek(0)
     return buf
 
+def returnRandomSong():
+    return os.path.join(AUDIO_FOLDER, random.choice(load_audio_files()))
+
+def next_song():
+    print("Next")
+    global shuffle,WAV_FILE
+    print(f"{historyPosition}, {len(history)}")
+    if historyPosition < len(history)-1:     #[song1, song2, _song3_] length=3 pos=2
+        song=history[historyPosition+1]
+        print("Playing next song...")
+    elif shuffle:
+        song = returnRandomSong()
+        print("Playing next random song...")
+    WAV_FILE=song
+    on_play()
+
+
 # --- Audio Thread ---
 def audio_thread():
-    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE, current_frame
+    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE, current_frame,looping
     if (WAV_FILE[-4:]==".mp3"):
         WAV_FILE=convert_mp3_to_wav(WAV_FILE)
     wf = wave.open(WAV_FILE, 'rb')
@@ -153,10 +179,14 @@ def audio_thread():
         global slider_update_id, current_frame
         if not user_seeking:
             scan_slider.set(current_frame * 100 / total_frames)
-            print(current_frame * 100 / total_frames)
+            #print(current_frame * 100 / total_frames)
         slider_update_id = root.after(20, update_slider)  # ~50fps is plenty
 
     update_slider()
+    if len(history)>0:
+        if history[-1] != WAV_FILE:
+            history.append(WAV_FILE)
+            
     while current_frame < total_frames and running:
         if user_seeking:
             threading.Event().wait(0.2)
@@ -183,6 +213,8 @@ def audio_thread():
         stream.write(samples.tobytes())
 
         current_frame = wf.tell()
+    if looping:
+        next_song()
     stream.stop_stream()
     stream.close()
     wf.close()
@@ -247,13 +279,19 @@ def on_speed(val):
     
 
 def on_play(restart=True):
-    global running, current_frame, user_seeking
+    global running, current_frame, user_seeking,shuffle,WAV_FILE,looping
+    print(f"Shuffling: {shuffle}, looping: {looping}")
     if selected_device_index is None:
         print("No output device selected.")
         return
     if not WAV_FILE:
         print("No audio file selected.")
-        return
+        if shuffle:
+            print("Picking random...")
+            WAV_FILE=returnRandomSong()
+        else:
+            return
+    print(WAV_FILE)
     # Stop current playback if running
     running = False
     threading.Event().wait(0.25)  # Slight delay for previous thread to exit
@@ -275,26 +313,37 @@ def on_play(restart=True):
     #threading.Thread(target=audio_thread, daemon=True).start()
 
 def on_close():
-    global running, WAV_FILE
+    global running, WAV_FILE, delete_temp_wav_files
     running = False
     threading.Event().wait(0.2)
     print()
     files = [f for f in os.listdir(script_dir) if f.endswith("mp3.convertedTo.wav")]
     # Delete the converted .wav file if it exists
-    for f in files:
-        if os.path.exists(os.path.join(script_dir,f)):
-            try:
-                os.remove(os.path.join(script_dir,f))
-                print(f"Deleted temporary file: {f}")
-            except Exception as e:
-                print(f"Failed to delete {f}: {e}")
+    if delete_temp_wav_files:
+        os.remove(audioMapPath)
+        for f in files:
+            if os.path.exists(os.path.join(script_dir,f)):
+                try:
+                    os.remove(os.path.join(script_dir,f))
+                    print(f"Deleted temporary file: {f}")
+                except Exception as e:
+                    print(f"Failed to delete {f}: {e}")
 
     root.destroy()
+
+def toggle(btn, var):
+    global shuffle, looping
+    if var=="shuffle":
+        shuffle= not shuffle
+        btn.config(bg="green" if shuffle else "red")
+    elif var =="looping":
+        looping= not looping
+        btn.config(bg="green" if looping else "red")
 
 # --- GUI Setup ---
 root = tk.Tk()
 root.title("Audio Player with EQ + Output Selection")
-root.geometry("350x600")
+root.geometry("350x700")
 
 # Device dropdown
 tk.Label(root, text="Output Device:").pack()
@@ -357,6 +406,27 @@ scan_slider.pack(fill="x", padx=10)
 # Bind mouse events to pause/resume seek
 scan_slider.bind("<Button-1>", on_slider_start)
 scan_slider.bind("<ButtonRelease-1>", on_slider_end)
+
+button_row = tk.Frame(root)
+button_row.pack(pady=10,anchor="center")
+
+shuffleBtn = tk.Button(button_row, text="Shuffle", bg="red", command=lambda: toggle(shuffleBtn, "shuffle"))
+shuffleBtn.pack(pady=20,side="left", padx=5)
+
+loopBtn = tk.Button(button_row, text="Loop", bg="red", command=lambda: toggle(loopBtn, "looping"))
+loopBtn.pack(pady=20,side="left", padx=5)
+
+nextBtn = tk.Button(button_row, text="Next", command=lambda: next_song())
+nextBtn.pack(pady=20,side="left", padx=5)
+
+if os.path.exists(audioMapPath):
+    with open(audioMapPath, "r") as file:
+        audioMap=json.loads(file.read())   
+else:
+    open(audioMapPath, "a").close()
+    audioMap={}
+        
+
 
 root.protocol("WM_DELETE_WINDOW", on_close)
 root.mainloop()
