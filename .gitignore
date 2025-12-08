@@ -3,5 +3,5 @@
 !.vscode/launch.json
 push.bat
 *.wav
-audioMap/json
+audioMap.json
 convertedFiles

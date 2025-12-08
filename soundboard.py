@@ -157,7 +157,7 @@ def next_song():
 
 # --- Audio Thread ---
 def audio_thread():
-    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE, current_frame,looping
+    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE,skip_loop, current_frame,looping
     if (WAV_FILE[-4:]==".mp3"):
         WAV_FILE=convert_mp3_to_wav(WAV_FILE)
     wf = wave.open(WAV_FILE, 'rb')
