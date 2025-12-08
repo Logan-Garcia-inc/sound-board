@@ -146,20 +146,20 @@ def returnRandomSong():
 def next_song():
     print("Next")
     global shuffle,WAV_FILE,historyPosition
-    #print(f"{historyPosition}, {len(history)}")
+    append=False
+    print(f"{historyPosition}, {len(history)}")
     if historyPosition < len(history)-1:     #[song1, song2, _song3_] length=3 pos=2
         song=history[historyPosition+1]
         print("Playing next song...")
     elif shuffle:
         song = returnRandomSong()
         print("Playing next random song...")
+        append=True
     WAV_FILE=song
-    on_play(appendToHistory=False)
+    on_play(appendToHistory=append)
 
 def last_song():
     global WAV_FILE,historyPosition
-    print(historyPosition)
-    print(history)
     song=history[historyPosition-1]
     historyPosition-=2
     print("Playing Previous song...")
@@ -329,14 +329,14 @@ def on_play(restart=True,appendToHistory=True):
         else:
             return
     print(WAV_FILE)
-
-    try:
-        if history[-1] != WAV_FILE:
+    if appendToHistory:
+        try:
+            if history[-1] != WAV_FILE:
+                history.append(WAV_FILE)
+        except IndexError as e:
             history.append(WAV_FILE)
-    except IndexError as e:
-        history.append(WAV_FILE)
-        #print(e)
-        pass
+            #print(e)
+            pass
     # Stop current playback if running
     running = False
     threading.Event().wait(0.25)  # Slight delay for previous thread to exit
