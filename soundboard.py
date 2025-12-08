@@ -53,7 +53,7 @@ skip_loop = False
 audioMapPath="audioMap.json"
 delete_temp_wav_files=False
 history=[]
-historyPosition=0
+historyPosition=-1
 target_dBFS=-25.0
 normalize_audio=True
 
@@ -75,7 +75,7 @@ def convert_mp3_to_wav(mp3_file_path):
         audioMap[mp3_file_path]=wav_file_path
         with open(audioMapPath,"w") as file:
             file.write(json.dumps(audioMap))
-    print(audioMap)
+    #print(audioMap)
     return wav_file_path
 
 def load_audio_files():
@@ -83,7 +83,7 @@ def load_audio_files():
         files = [f for f in os.listdir(AUDIO_FOLDER) if (f.lower().endswith(".wav") or f.lower().endswith(".mp3"))]
         return files
     except FileNotFoundError:
-        print("\nAudio directory path not accessible: "+AUDIO_FOLDER+"\nEdit path on line 1")
+        print("\nAudio directory path not accessible: "+AUDIO_FOLDER)
         threading.Event().wait(5)
 
 def on_file_select(event):
@@ -145,7 +145,7 @@ def returnRandomSong():
 
 def next_song():
     print("Next")
-    global shuffle,WAV_FILE
+    global shuffle,WAV_FILE,historyPosition
     #print(f"{historyPosition}, {len(history)}")
     if historyPosition < len(history)-1:     #[song1, song2, _song3_] length=3 pos=2
         song=history[historyPosition+1]
@@ -154,8 +154,17 @@ def next_song():
         song = returnRandomSong()
         print("Playing next random song...")
     WAV_FILE=song
-    on_play()
+    on_play(appendToHistory=False)
 
+def last_song():
+    global WAV_FILE,historyPosition
+    print(historyPosition)
+    print(history)
+    song=history[historyPosition-1]
+    historyPosition-=2
+    print("Playing Previous song...")
+    WAV_FILE=song
+    on_play(appendToHistory=False)
 
 # --- Audio Thread ---
 def normalize_rms(samples):
@@ -177,7 +186,7 @@ def normalize_rms(samples):
     return samples * gain
 
 def audio_thread():
-    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE,skip_loop, current_frame,looping
+    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE,skip_loop, history, current_frame,looping
     if (WAV_FILE[-4:]==".mp3"):
         WAV_FILE=convert_mp3_to_wav(WAV_FILE)
     wf = wave.open(WAV_FILE, 'rb')
@@ -210,10 +219,7 @@ def audio_thread():
         slider_update_id = root.after(20, update_slider)  # ~50fps is plenty
 
     update_slider()
-    if len(history)>0:
-        if history[-1] != WAV_FILE:
-            history.append(WAV_FILE)
-    
+
     while current_frame < total_frames and running:
         if user_seeking:
             threading.Event().wait(0.2)
@@ -309,9 +315,9 @@ def on_speed(val):
 
     
 
-def on_play(restart=True):
-    global running, current_frame, user_seeking,shuffle,WAV_FILE,looping
-    print(f"Shuffling: {shuffle}, looping: {looping}")
+def on_play(restart=True,appendToHistory=True):
+    global running, current_frame, user_seeking,shuffle,WAV_FILE,looping,historyPosition
+    print(f"Shuffling: {shuffle}, looping: {looping}\n")
     if selected_device_index is None:
         print("No output device selected.")
         return
@@ -323,6 +329,14 @@ def on_play(restart=True):
         else:
             return
     print(WAV_FILE)
+
+    try:
+        if history[-1] != WAV_FILE:
+            history.append(WAV_FILE)
+    except IndexError as e:
+        history.append(WAV_FILE)
+        #print(e)
+        pass
     # Stop current playback if running
     running = False
     threading.Event().wait(0.25)  # Slight delay for previous thread to exit
@@ -332,6 +346,9 @@ def on_play(restart=True):
         current_frame = 0
         user_seeking = True   # Temporarily stop slider updates
         scan_slider.set(0)
+        historyPosition+=1
+    print(historyPosition)
+
     user_seeking = False  # Resume updates
     global slider_update_id
     if slider_update_id is not None:
@@ -464,6 +481,8 @@ normalizeSlider.pack(fill="x", padx=10)
 normalizeSlider.set(-20.0)
 tk.Label(root, text="Normalize Strength").pack(pady=(4, 0))
 
+previousBtn = tk.Button(button_row, text="Previous", command=lambda: last_song())
+previousBtn.pack(pady=8,side="left", padx=5)
 
 nextBtn = tk.Button(button_row, text="Next", command=lambda: next_song())
 nextBtn.pack(pady=8,side="left", padx=5)
