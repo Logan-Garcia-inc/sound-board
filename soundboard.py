@@ -51,9 +51,11 @@ shuffle=False
 looping=False
 skip_loop = False
 audioMapPath="audioMap.json"
-delete_temp_wav_files=True
+delete_temp_wav_files=False
 history=[]
 historyPosition=0
+target_dBFS=-25.0
+normalize_audio=True
 
 # --- WAV File ---
 WAV_FILE = None  
@@ -156,6 +158,24 @@ def next_song():
 
 
 # --- Audio Thread ---
+def normalize_rms(samples):
+    global target_dBFS
+    """
+    samples: np.array of float32 audio samples
+    target_dBFS: desired RMS loudness in dBFS
+    """
+    # Compute current RMS in dBFS
+    rms = np.sqrt(np.mean(samples**2))
+    if rms == 0:
+        return samples  # avoid divide by zero
+
+    # Convert target dBFS to linear scale
+    target_rms = 10 ** (target_dBFS / 20)
+    gain = target_rms / rms
+
+    # Apply gain
+    return samples * gain
+
 def audio_thread():
     global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE,skip_loop, current_frame,looping
     if (WAV_FILE[-4:]==".mp3"):
@@ -174,7 +194,10 @@ def audio_thread():
                 frames_per_buffer=1024,
                 stream_callback=None,
                 start=True)
-
+    
+    samples = np.frombuffer(wf.readframes(total_frames), dtype=np.int16).astype(np.float32) / 32768.0
+    if normalize_audio:
+        samples = normalize_rms(samples)
     chunk = 1024
     data = wf.readframes(chunk)
 
@@ -190,7 +213,7 @@ def audio_thread():
     if len(history)>0:
         if history[-1] != WAV_FILE:
             history.append(WAV_FILE)
-
+    
     while current_frame < total_frames and running:
         if user_seeking:
             threading.Event().wait(0.2)
@@ -202,18 +225,17 @@ def audio_thread():
             break
 
         samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
-        # if speed != 1.0:
-        #      indices = np.arange(0, len(samples), speed)
-        #      indices = indices[indices < len(samples)]
-        #      samples = samples[indices.astype(int)]
-        #if speed != 1.0:
-         #   samples = librosa.effects.time_stretch(y=samples, rate=speed)
+        samples /= 32768.0  # scale to [-1.0, 1.0]
+        if normalize_audio:
+            samples = normalize_rms(samples)
+        else:
+            samples *= volume
 
         samples = biquad_shelf(samples, rate, bass_gain, 200, "low")
         samples = biquad_shelf(samples, rate, treble_gain, 4000, "high")
+        
+        samples = np.clip(samples * 32768, -32768, 32767).astype(np.int16)  # scale back to int16
 
-        samples *= volume
-        samples = np.clip(samples, -32768, 32767).astype(np.int16)
         stream.write(samples.tobytes())
 
         current_frame = wf.tell()
@@ -237,11 +259,11 @@ def on_slider_change(val):
         current_frame = new_pos
         wf.close()
 
-def on_slider_start(event):
+def on_scan_slider_start(event):
     global user_seeking
     user_seeking = True
 
-def on_slider_end(event):
+def on_scan_slider_end(event):
     global user_seeking
     user_seeking = False
     on_slider_change(scan_slider.get())
@@ -341,18 +363,26 @@ def on_close():
     root.destroy()
 
 def toggle(btn, var):
-    global shuffle, looping
+    global shuffle, looping, normalize_audio
     if var=="shuffle":
         shuffle= not shuffle
         btn.config(bg="green" if shuffle else "red")
     elif var =="looping":
         looping= not looping
         btn.config(bg="green" if looping else "red")
+    elif var =="normalize":
+        normalize_audio= not normalize_audio
+        btn.config(bg="green" if normalize_audio else "red")
+        
+def on_normalize(val):
+    global target_dBFS
+    val=float(val)
+    target_dBFS = val
 
 # --- GUI Setup ---
 root = tk.Tk()
 root.title("Audio Player with EQ + Output Selection")
-root.geometry("350x700")
+root.geometry("350x740")
 
 # Device dropdown
 tk.Label(root, text="Output Device:").pack()
@@ -400,7 +430,7 @@ speed_slider.pack(pady=6)
 tk.Label(root, text="Playback Speed (x)").pack(pady=(4, 0))
 
 
-tk.Label(root, text="Select Audio File:").pack(pady=(10, 0))
+tk.Label(root, text="Select Audio File:").pack(pady=(7, 0))
 file_listbox = tk.Listbox(root, height=6, width=35)
 file_listbox.pack(pady=6)
 file_listbox.bind("<<ListboxSelect>>", on_file_select)
@@ -413,20 +443,30 @@ scan_slider = tk.Scale(root, from_=0, to=100,length=300, orient="horizontal")#, 
 scan_slider.pack(fill="x", padx=10)
 
 # Bind mouse events to pause/resume seek
-scan_slider.bind("<Button-1>", on_slider_start)
-scan_slider.bind("<ButtonRelease-1>", on_slider_end)
+scan_slider.bind("<Button-1>", on_scan_slider_start)
+scan_slider.bind("<ButtonRelease-1>", on_scan_slider_end)
 
 button_row = tk.Frame(root)
-button_row.pack(pady=10,anchor="center")
+button_row.pack(pady=6,anchor="center")
 
 shuffleBtn = tk.Button(button_row, text="Shuffle", bg="red", command=lambda: toggle(shuffleBtn, "shuffle"))
-shuffleBtn.pack(pady=20,side="left", padx=5)
+shuffleBtn.pack(pady=10,side="left", padx=5)
 
 loopBtn = tk.Button(button_row, text="Loop", bg="red", command=lambda: toggle(loopBtn, "looping"))
-loopBtn.pack(pady=20,side="left", padx=5)
+loopBtn.pack(pady=10,side="left", padx=5)
+
+normalizeBtn = tk.Button(button_row, bg="green",text="Normalize", command=lambda: toggle(normalizeBtn, "normalize"))
+normalizeBtn.pack(pady=7,side="left", padx=5)
+
+
+normalizeSlider = tk.Scale(root, from_=-40, to=0,length=300, orient="horizontal", command=on_normalize)
+normalizeSlider.pack(fill="x", padx=10)
+normalizeSlider.set(-20.0)
+tk.Label(root, text="Normalize Strength").pack(pady=(4, 0))
+
 
 nextBtn = tk.Button(button_row, text="Next", command=lambda: next_song())
-nextBtn.pack(pady=20,side="left", padx=5)
+nextBtn.pack(pady=8,side="left", padx=5)
 
 if os.path.exists(audioMapPath):
     with open(audioMapPath, "r") as file:
