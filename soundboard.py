@@ -195,13 +195,13 @@ def audio_thread():
                 stream_callback=None,
                 start=True)
     
+    total_frames = wf.getnframes()
     samples = np.frombuffer(wf.readframes(total_frames), dtype=np.int16).astype(np.float32) / 32768.0
     if normalize_audio:
         samples = normalize_rms(samples)
     chunk = 1024
     data = wf.readframes(chunk)
 
-    total_frames = wf.getnframes()
     def update_slider():
         global slider_update_id, current_frame
         if not user_seeking:
