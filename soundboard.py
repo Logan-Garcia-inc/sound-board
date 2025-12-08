@@ -12,7 +12,7 @@ try:
 except Exception as e:
     print(e)
 
-print(AUDIO_FOLDER)
+print(f"Audio folder: {AUDIO_FOLDER}")
 import io
 import random
 import wave
@@ -32,10 +32,11 @@ import soundfile as sf
 
 # --- Shared State ---
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-os.environ["PATH"] += os.pathsep + script_dir
-AudioSegment.converter =  os.path.join(script_dir, "scripts\\ffmpeg.exe")
-AudioSegment.ffprobe = os.path.join(script_dir, "scripts\\ffprobe.exe")
+file_dir = os.path.dirname(os.path.abspath(__file__))
+converted_files_path=file_dir+"\\convertedFiles\\"
+os.environ["PATH"] += os.pathsep + file_dir
+AudioSegment.converter =  os.path.join(file_dir, "scripts\\ffmpeg.exe")
+AudioSegment.ffprobe = os.path.join(file_dir, "scripts\\ffprobe.exe")
 volume = 0.5
 bass_gain = 0.0
 treble_gain = 0.0
@@ -48,8 +49,9 @@ selected_device_index = None
 slider_update_id=None
 shuffle=False
 looping=False
+skip_loop = False
 audioMapPath="audioMap.json"
-delete_temp_wav_files=False
+delete_temp_wav_files=True
 history=[]
 historyPosition=0
 
@@ -59,11 +61,13 @@ WAV_FILE = None
 p = pyaudio.PyAudio()    
 
 def convert_mp3_to_wav(mp3_file_path):
-    global audioMapPath, audioMap
+    global audioMapPath, audioMap,converted_files_path
     if mp3_file_path in audioMap.keys():
         wav_file_path=audioMap[mp3_file_path]
     else:
-        wav_file_path = script_dir+"\\"+os.path.basename(mp3_file_path) + ".convertedTo.wav"
+        if not os.path.exists(converted_files_path):
+            os.mkdir(converted_files_path)
+        wav_file_path = converted_files_path+os.path.basename(mp3_file_path) + ".convertedTo.wav"
         sound = AudioSegment.from_mp3(mp3_file_path)
         sound.export(wav_file_path, format="wav")
         audioMap[mp3_file_path]=wav_file_path
@@ -140,7 +144,7 @@ def returnRandomSong():
 def next_song():
     print("Next")
     global shuffle,WAV_FILE
-    print(f"{historyPosition}, {len(history)}")
+    #print(f"{historyPosition}, {len(history)}")
     if historyPosition < len(history)-1:     #[song1, song2, _song3_] length=3 pos=2
         song=history[historyPosition+1]
         print("Playing next song...")
@@ -186,7 +190,7 @@ def audio_thread():
     if len(history)>0:
         if history[-1] != WAV_FILE:
             history.append(WAV_FILE)
-            
+
     while current_frame < total_frames and running:
         if user_seeking:
             threading.Event().wait(0.2)
@@ -213,8 +217,9 @@ def audio_thread():
         stream.write(samples.tobytes())
 
         current_frame = wf.tell()
-    if looping:
+    if looping and not skip_loop:
         next_song()
+    skip_loop = False
     stream.stop_stream()
     stream.close()
     wf.close()
@@ -268,14 +273,18 @@ def on_device_select(event):
             break
 
 def on_speed(val):
+    global skip_loop,speed
     val=float(val)
     if abs(val - 1.0) <= 0.02:
         val = 1.0
         speed_slider.set(1.0)
-    global speed
+    
     speed = val
+    
     if running:
+        skip_loop = True
         on_play(restart=False)
+
     
 
 def on_play(restart=True):
@@ -317,14 +326,14 @@ def on_close():
     running = False
     threading.Event().wait(0.2)
     print()
-    files = [f for f in os.listdir(script_dir) if f.endswith("mp3.convertedTo.wav")]
+    files = [f for f in os.listdir(file_dir) if f.endswith("mp3.convertedTo.wav")]
     # Delete the converted .wav file if it exists
     if delete_temp_wav_files:
         os.remove(audioMapPath)
         for f in files:
-            if os.path.exists(os.path.join(script_dir,f)):
+            if os.path.exists(os.path.join(file_dir,f)):
                 try:
-                    os.remove(os.path.join(script_dir,f))
+                    os.remove(os.path.join(file_dir,f))
                     print(f"Deleted temporary file: {f}")
                 except Exception as e:
                     print(f"Failed to delete {f}: {e}")
