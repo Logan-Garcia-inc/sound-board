@@ -13,6 +13,7 @@ except Exception as e:
     print(e)
 
 print(f"Audio folder: {AUDIO_FOLDER}")
+from flask import Flask, render_template, send_from_directory, request, jsonify
 import io
 import random
 import wave
@@ -56,6 +57,7 @@ history=[]
 historyPosition=-1
 target_dBFS=-25.0
 normalize_audio=True
+state_lock = threading.Lock()
 
 # --- WAV File ---
 WAV_FILE = None  
@@ -396,6 +398,142 @@ def on_normalize(val):
     val=float(val)
     target_dBFS = val
 
+def sync_tk_states():
+    with state_lock:
+        volume_slider.set(volume)
+        bass_slider.set(bass_gain)
+        treble_slider.set(treble_gain)
+        speed_slider.set(speed)
+        scan_slider.set(current_frame)
+        normalizeSlider.set(target_dBFS)
+    root.after(50, sync_tk_states)
+
+app = Flask(__name__)
+@app.route("/")
+def index():
+    return render_template("index.html", sounds=load_audio_files())
+
+@app.route("/play/<sound>")
+def on_web_play(sound):
+    global WAV_FILE
+    WAV_FILE=AUDIO_FOLDER+"\\"+sound
+    on_play(restart=True)
+    return("OK")
+
+@app.route("/stop")
+def on_web_stop():
+    global running
+    running=False
+    return("OK")
+
+@app.route("/set_volume", methods=["POST"])
+def set_volume():
+    global volume
+    data = request.json
+    new_volume = float(data["value"])
+    with state_lock:
+        volume = new_volume
+    return jsonify(success=True)
+
+@app.route("/set_bass", methods=["POST"])
+def set_bass():
+    global bass_gain
+    data = request.json
+    bass = float(data["value"])
+    with state_lock:
+        bass_gain = bass
+    return jsonify(success=True)
+
+@app.route("/set_treble", methods=["POST"])
+def set_treble():
+    global treble_gain
+    data = request.json
+    treble = float(data["value"])
+    with state_lock:
+        treble_gain = treble
+    return jsonify(success=True)
+
+@app.route("/set_speed", methods=["POST"])
+def set_speed():
+    global speed
+    data = request.json
+    speedVal = float(data["value"])
+    with state_lock:
+        speed = speedVal
+    return jsonify(success=True)
+
+@app.route("/set_scan", methods=["POST"])
+def set_scan():
+    global current_frame
+    data = request.json
+    scan = float(data["value"])
+    with state_lock:
+        current_frame = scan
+    return jsonify(success=True)
+
+@app.route("/set_normalize_val", methods=["POST"])
+def set_normalize():
+    global target_dBFS
+    data = request.json
+    normalize = float(data["value"])
+    with state_lock:
+        target_dBFS = normalize
+    return jsonify(success=True)
+
+@app.route("/set_shuffle", methods=["POST"])
+def web_shuffle():
+    global shuffle
+    data = request.json
+    with state_lock:
+        shuffle = not shuffle
+        toggle(shuffleBtn, "shuffle")
+    return "OK"
+
+@app.route("/set_loop", methods=["POST"])
+def web_loop():
+    global looping
+    data = request.json
+    with state_lock:
+        looping = not looping
+        toggle(loopBtn, "looping")
+    return "OK"
+
+@app.route("/set_normalize", methods=["POST"])
+def web_normalize():
+    global normalize_audio
+    data = request.json
+    with state_lock:
+        normalize_audio = not normalize_audio
+        toggle(normalizeBtn, "normalize")
+    return "OK"
+
+@app.route("/next_song", methods=["POST"])
+def next():
+    next_song()
+    return "OK"
+
+@app.route("/last_song", methods=["POST"])
+def previous():
+    last_song()
+    return "OK"
+
+@app.route("/state")
+def get_state():
+    global volume, bass_gain, treble_gain, speed, shuffle, looping, target_dBFS, normalize_audio, current_frame
+    with state_lock:
+        state = {
+            "volume": volume,
+            "bass_gain": bass_gain,
+            "treble_gain": treble_gain,
+            "speed": speed,
+            "shuffle": shuffle,
+            "looping": looping,
+            "normalize_strength": target_dBFS,
+            "normalize_audio": normalize_audio,
+            "current_frame": current_frame,
+        }
+        return jsonify(state)
+
 # --- GUI Setup ---
 root = tk.Tk()
 root.title("Audio Player with EQ + Output Selection")
@@ -487,6 +625,7 @@ previousBtn.pack(pady=8,side="left", padx=5)
 nextBtn = tk.Button(button_row, text="Next", command=lambda: next_song())
 nextBtn.pack(pady=8,side="left", padx=5)
 
+
 if os.path.exists(audioMapPath):
     with open(audioMapPath, "r") as file:
         audioMap=json.loads(file.read())   
@@ -495,7 +634,14 @@ else:
     audioMap={}
         
 
-
+sync_tk_states()
 root.protocol("WM_DELETE_WINDOW", on_close)
+if __name__ == "__main__":
+    threading.Thread(target=app.run, kwargs={
+        "host": "0.0.0.0",
+        "port": 5000,
+        "use_reloader": False
+    }, daemon=True).start()
+
 root.mainloop()
 p.terminate()

@@ -7,3 +7,4 @@ tkinter
 scipy
 librosa
 soundfile
+flask
