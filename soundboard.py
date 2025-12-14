@@ -56,7 +56,7 @@ delete_temp_wav_files=False
 history=[]
 historyPosition=-1
 target_dBFS=-25.0
-normalize_audio=True
+normalize_audio=False
 state_lock = threading.Lock()
 
 # --- WAV File ---
@@ -254,7 +254,7 @@ def audio_thread():
     stream.close()
     wf.close()
 
-def on_slider_change(val):
+def on_slider_change(frame):
     global current_frame, user_seeking,WAV_FILE
     if WAV_FILE:
         temp=WAV_FILE
@@ -263,7 +263,7 @@ def on_slider_change(val):
             temp = fast_speed_change(temp, speed)
         wf = wave.open(temp, 'rb')
         total_frames = wf.getnframes()
-        new_pos = int(float(val) / 100 * total_frames)
+        new_pos = int(float(frame) / 100 * total_frames)
         current_frame = new_pos
         wf.close()
 
@@ -302,15 +302,13 @@ def on_device_select(event):
             selected_device_index = idx
             break
 
-def on_speed(val):
-    global skip_loop,speed
-    val=float(val)
-    if abs(val - 1.0) <= 0.02:
-        val = 1.0
+def on_speed(speed_val):
+    global skip_loop, speed
+    speed_val=float(speed_val)
+    if abs(speed_val - 1.0) <= 0.02:
+        speed_val = 1.0
         speed_slider.set(1.0)
-    
-    speed = val
-    
+    speed = speed_val
     if running:
         skip_loop = True
         on_play(restart=False)
@@ -420,7 +418,7 @@ def on_web_play(sound):
     on_play(restart=True)
     return("OK")
 
-@app.route("/stop")
+@app.route("/stop", methods=["POST"])
 def on_web_stop():
     global running
     running=False
@@ -454,21 +452,20 @@ def set_treble():
     return jsonify(success=True)
 
 @app.route("/set_speed", methods=["POST"])
-def set_speed():
+def web_set_speed():
     global speed
     data = request.json
     speedVal = float(data["value"])
     with state_lock:
-        speed = speedVal
+        on_speed(speedVal)
     return jsonify(success=True)
 
 @app.route("/set_scan", methods=["POST"])
 def set_scan():
-    global current_frame
     data = request.json
     scan = float(data["value"])
     with state_lock:
-        current_frame = scan
+        on_slider_change(scan)
     return jsonify(success=True)
 
 @app.route("/set_normalize_val", methods=["POST"])
@@ -480,47 +477,45 @@ def set_normalize():
         target_dBFS = normalize
     return jsonify(success=True)
 
-@app.route("/set_shuffle", methods=["POST"])
+@app.route("/shuffle", methods=["POST"])
 def web_shuffle():
     global shuffle
     data = request.json
     with state_lock:
-        shuffle = not shuffle
         toggle(shuffleBtn, "shuffle")
     return "OK"
 
-@app.route("/set_loop", methods=["POST"])
+@app.route("/loop", methods=["POST"])
 def web_loop():
     global looping
     data = request.json
     with state_lock:
-        looping = not looping
         toggle(loopBtn, "looping")
     return "OK"
 
-@app.route("/set_normalize", methods=["POST"])
+@app.route("/normalize", methods=["POST"])
 def web_normalize():
     global normalize_audio
     data = request.json
     with state_lock:
-        normalize_audio = not normalize_audio
         toggle(normalizeBtn, "normalize")
     return "OK"
 
-@app.route("/next_song", methods=["POST"])
+@app.route("/next", methods=["POST"])
 def next():
     next_song()
     return "OK"
 
-@app.route("/last_song", methods=["POST"])
+@app.route("/last", methods=["POST"])
 def previous():
     last_song()
     return "OK"
 
 @app.route("/state")
 def get_state():
-    global volume, bass_gain, treble_gain, speed, shuffle, looping, target_dBFS, normalize_audio, current_frame
+    global volume, bass_gain, treble_gain, speed, shuffle, looping, target_dBFS, normalize_audio, current_frame,WAV_FILE
     with state_lock:
+        print(WAV_FILE)
         state = {
             "volume": volume,
             "bass_gain": bass_gain,
@@ -529,8 +524,10 @@ def get_state():
             "shuffle": shuffle,
             "looping": looping,
             "normalize_strength": target_dBFS,
-            "normalize_audio": normalize_audio,
+            "normalize": normalize_audio,
             "current_frame": current_frame,
+            
+            "currently_playing": os.path.basename(WAV_FILE).split(".")[0]
         }
         return jsonify(state)
 
@@ -610,7 +607,7 @@ shuffleBtn.pack(pady=10,side="left", padx=5)
 loopBtn = tk.Button(button_row, text="Loop", bg="red", command=lambda: toggle(loopBtn, "looping"))
 loopBtn.pack(pady=10,side="left", padx=5)
 
-normalizeBtn = tk.Button(button_row, bg="green",text="Normalize", command=lambda: toggle(normalizeBtn, "normalize"))
+normalizeBtn = tk.Button(button_row, bg="green" if normalize_audio else "red",text="Normalize", command=lambda: toggle(normalizeBtn, "normalize"))
 normalizeBtn.pack(pady=7,side="left", padx=5)
 
 

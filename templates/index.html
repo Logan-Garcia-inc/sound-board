@@ -3,67 +3,72 @@
 <head>
     <title>LAN Soundboard</title>
     <style>
-        body { font-family: sans-serif; background: #111; color: #fff; }
+        body { font-family: sans-serif; 
+            background: #111; 
+            color: #fff;
+         }
         button {
             margin: 12px;
             padding: 15px;
             font-size: 16px;
             cursor: pointer;
-            background-color: purple;
-            border-radius: 6px;
+            background-color: #b31bb3;
+            border-radius: 6%;
         }
         .sounds {
+            justify-content: center;
             display: flex;
             flex-wrap: wrap;
-            width: clamp(300px, 30%, 600px);
+            width: clamp(300px, 85%, 100%);
         }
     </style>
 </head>
 <body>
     
-    <h1>Soundboard</h1>
-    <div class ="sounds"></div>
+    
+    <div class ="sounds">
+        <h1>Soundboard</h1><br
     {% for sound in sounds %}
         <button onclick="play('{{ sound }}')">{{ sound }}</button>
     {% endfor %}
     </div>
 
 <div class="sliderContainer">
-<a>Volume</a> <input class="slider, volSlider" step="0.01" type="range" min="0.00" max="3.00" value="1" oninput="set_state('volume',this.value)">
-<a>Bass</a> <input class="slider, bassSlider" step="0.01" type="range" min="-15" max="15" value="0" oninput="set_state('bass',this.value)">
-<a>Treble</a> <input class="slider, trebleSlider" step="0.01" type="range" min="-12" max="12" value="0" oninput="set_state('treble',this.value)">
-<a>Speed</a> <input class="slider, speedSlider" step="0.01" type="range" min="0.50" max="3" value="1" oninput="set_state('speed',this.value)">
-<a,this.value>Scan</a> <input class="slider, scanSlider" step="0.01" type="range" min="0" max="100" value="0" oninput="set_state('scan',this.value)">
-<a>Normalize Strength</a> <input class="slider, normalizeSlider" step="0.01" type="range" min="-40" max="0" value="50" oninput="set_state('normalize_val',this.value)">
-<button class="optionbtn, shuffle" onclick="set_state('shuffle')">Shuffle</button>
-<button class="optionbtn, looping" onclick="set_state('loop')">Looping</button>
-<button class="optionbtn, normalize" onclick="set_state('normalize')">Normalize</button>
-<button class="optionbtn, previous" onclick="set_state('previous')">Previous song</button>
-<button class="optionbtn, next" onclick="set_state('next')">Next song</button>
+<h1>   Options</h1>
+<a>Volume</a> <input class="slider volSlider" step="0.01" type="range" min="0.00" max="3.00" value="1" oninput="set_state('set_volume',this.value)">
+<a>Bass</a> <input class="slider bassSlider" step="0.01" type="range" min="-15" max="15" value="0" oninput="set_state('set_bass',this.value)">
+<a>Treble</a> <input class="slider trebleSlider" step="0.01" type="range" min="-12" max="12" value="0" oninput="set_state('set_treble',this.value)">
+<a>Speed</a> <input class="slider speedSlider" step="0.01" type="range" min="0.50" max="3" value="1" oninput="set_state('set_speed',this.value)">
+<a,this.value>Scan</a> <input class="slider scanSlider" step="0.01" type="range" min="0" max="100" value="0" oninput="set_state('set_scan',this.value)">
+<a>Normalize Strength</a> <input class="slider normalizeSlider" step="0.01" type="range" min="-40" max="0" value="50" oninput="set_state('set_normalize_val',this.value)">
+<br>
+<button class="optionbtn shuffle" onclick="set_state('shuffle')">Shuffle</button>
+<button class="optionbtn looping" onclick="set_state('loop')">Looping</button>
+<button class="optionbtn normalize" onclick="set_state('normalize')">Normalize</button>
+<button class="optionbtn previous" onclick="set_state('previous')">Previous song</button>
+<button class="optionbtn next" onclick="set_state('next')">Next song</button>
+<button class="optionbtn stop" onclick="set_state('stop')">Stop</button>
+<a>   Currently Playing: <span id="currentPlaying">None</span></a>
 </div>
 </body>
 
-<script>
-    tempSliders = document.querySelectorAll("input");
-    console.log(tempSliders);
+<script defer>
+    tempSliders = document.querySelectorAll(".slider");
     sliders=[];
     for (let i=0; i<tempSliders.length; i++) {
-        console.log(tempSliders[i].classList[1]);
+        //console.log(tempSliders[i].classList[1]);
         sliders[tempSliders[i].classList[1]]=tempSliders[i];
 }
-    console.log(sliders)
+    //console.log(sliders)
 
-    tempBtns = document.querySelectorAll("input");
-    console.log(tempBtns);
-    optionBtns=[];
-    for (let i=0; i<tempBtns.length; i++) {
-        console.log(tempBtns[i].classList[1]);
-        sliders[tempBtns[i].classList[1]]=tempBtns[i];
-}
-    console.log(optionBtns)
+    tempBtns = document.querySelectorAll(".optionbtn");
+    optionBtns={};
+    tempBtns.forEach(element => {
+        optionBtns[element.classList[1]]=element;
+    })
 
 function set_state(val,state) {
-    fetch(`/set_${val}`, {
+    fetch(`/${val}`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ value: state })
@@ -83,11 +88,12 @@ function set_state(val,state) {
             sliders["speedSlider"].value=s.speed;
             sliders["scanSlider"].value=s.current_frame;
             sliders["normalizeSlider"].value=s.normalize_strength;
-            for (let i=0;i<optionBtns.length;i++) {
-                optionBtns[i].style.backgroundColor = s[optionBtns[i].classList[1]] ? "green" : "red";
-            }
-        });
-}, 250);
-
+            optionBtns["shuffle"].style.backgroundColor = s.shuffle ? "green" : "red";
+            optionBtns["looping"].style.backgroundColor = s.looping ? "green" : "red";
+            optionBtns["normalize"].style.backgroundColor = s.normalize ? "green" : "red";
+            document.getElementById("currentPlaying").innerText = s.currently_playing ? s.currently_playing : "None";
+            
+}, 350);
+})
     </script>
 </html>
