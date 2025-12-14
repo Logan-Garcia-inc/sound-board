@@ -457,7 +457,7 @@ def web_set_speed():
     data = request.json
     speedVal = float(data["value"])
     with state_lock:
-        on_speed(speedVal)
+        threading.Thread(target=on_speed, args=(speedVal)).start()
     return jsonify(success=True)
 
 @app.route("/set_scan", methods=["POST"])
@@ -503,19 +503,20 @@ def web_normalize():
 
 @app.route("/next", methods=["POST"])
 def next():
-    next_song()
+    with state_lock:
+        next_song()
     return "OK"
 
 @app.route("/last", methods=["POST"])
 def previous():
-    last_song()
+    with state_lock:
+        last_song()
     return "OK"
 
 @app.route("/state")
 def get_state():
     global volume, bass_gain, treble_gain, speed, shuffle, looping, target_dBFS, normalize_audio, current_frame,WAV_FILE
     with state_lock:
-        print(WAV_FILE)
         state = {
             "volume": volume,
             "bass_gain": bass_gain,
@@ -526,7 +527,6 @@ def get_state():
             "normalize_strength": target_dBFS,
             "normalize": normalize_audio,
             "current_frame": current_frame,
-            
             "currently_playing": os.path.basename(WAV_FILE).split(".")[0]
         }
         return jsonify(state)
