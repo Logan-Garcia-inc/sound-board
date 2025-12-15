@@ -57,6 +57,7 @@ history=[]
 historyPosition=-1
 target_dBFS=-25.0
 normalize_audio=False
+web_speed_change=False
 state_lock = threading.Lock()
 
 # --- WAV File ---
@@ -397,13 +398,16 @@ def on_normalize(val):
     target_dBFS = val
 
 def sync_tk_states():
+    global web_speed_change,speed
     with state_lock:
         volume_slider.set(volume)
         bass_slider.set(bass_gain)
         treble_slider.set(treble_gain)
-        speed_slider.set(speed)
         scan_slider.set(current_frame)
         normalizeSlider.set(target_dBFS)
+        if web_speed_change:
+            on_speed(speed)
+            web_speed_change=False
     root.after(50, sync_tk_states)
 
 app = Flask(__name__)
@@ -457,7 +461,7 @@ def web_set_speed():
     data = request.json
     speedVal = float(data["value"])
     with state_lock:
-        threading.Thread(target=on_speed, args=(speedVal)).start()
+        speed= speedVal
     return jsonify(success=True)
 
 @app.route("/set_scan", methods=["POST"])

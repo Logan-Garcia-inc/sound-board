@@ -39,7 +39,7 @@
 <a>Bass</a> <input class="slider bassSlider" step="0.01" type="range" min="-15" max="15" value="0" oninput="set_state('set_bass',this.value)">
 <a>Treble</a> <input class="slider trebleSlider" step="0.01" type="range" min="-12" max="12" value="0" oninput="set_state('set_treble',this.value)">
 <a>Speed</a> <input class="slider speedSlider" step="0.01" type="range" min="0.50" max="3" value="1" onchange="set_state('set_speed', this.value)">
-<a,this.value>Scan</a> <input class="slider scanSlider" step="0.01" type="range" min="0" max="100" value="0" oninput="set_state('set_scan',this.value)">
+<a>Scan</a> <input class="slider scanSlider" step="0.01" type="range" min="0" max="100" value="0" oninput="set_state('set_scan',this.value)">
 <a>Normalize Strength</a> <input class="slider normalizeSlider" step="0.01" type="range" min="-40" max="0" value="50" oninput="set_state('set_normalize_val',this.value)">
 <br>
 <button class="optionbtn shuffle" onclick="set_state('shuffle')">Shuffle</button>
@@ -48,7 +48,7 @@
 <button class="optionbtn previous" onclick="set_state('previous')">Previous song</button>
 <button class="optionbtn stop" onclick="set_state('stop')">Stop</button>
 <button class="optionbtn next" onclick="set_state('next')">Next song</button>
-<a>   Currently Playing: <span id="currentPlaying">None</span></a>
+<a>Currently Playing: <span id="currentPlaying">None</span></a>
 </div>
 </body>
 
