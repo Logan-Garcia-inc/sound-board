@@ -67,17 +67,23 @@ p = pyaudio.PyAudio()
 
 def convert_mp3_to_wav(mp3_file_path):
     global audioMapPath, audioMap,converted_files_path
-    if mp3_file_path in audioMap.keys():
-        wav_file_path=audioMap[mp3_file_path]
-    else:
-        if not os.path.exists(converted_files_path):
-            os.mkdir(converted_files_path)
-        wav_file_path = converted_files_path+os.path.basename(mp3_file_path) + ".convertedTo.wav"
-        sound = AudioSegment.from_mp3(mp3_file_path)
-        sound.export(wav_file_path, format="wav")
-        audioMap[mp3_file_path]=wav_file_path
-        with open(audioMapPath,"w") as file:
-            file.write(json.dumps(audioMap))
+    try:
+        if mp3_file_path in audioMap.keys():
+            wav_file_path=audioMap[mp3_file_path]
+            return wav_file_path
+    except IndexError as e:
+        audioMap={}
+        os.remove(audioMapPath)
+        print(e)
+
+    if not os.path.exists(converted_files_path):
+        os.mkdir(converted_files_path)
+    wav_file_path = converted_files_path+os.path.basename(mp3_file_path) + ".convertedTo.wav"
+    sound = AudioSegment.from_mp3(mp3_file_path)
+    sound.export(wav_file_path, format="wav")
+    audioMap[mp3_file_path]=wav_file_path
+    with open(audioMapPath,"w") as file:
+        file.write(json.dumps(audioMap))
     #print(audioMap)
     return wav_file_path
 
@@ -184,7 +190,6 @@ def normalize_rms(samples):
     # Convert target dBFS to linear scale
     target_rms = 10 ** (target_dBFS / 20)
     gain = target_rms / rms
-
     # Apply gain
     return samples * gain
 
@@ -222,7 +227,6 @@ def audio_thread():
         slider_update_id = root.after(20, update_slider)  # ~50fps is plenty
 
     update_slider()
-
     while current_frame < total_frames and running:
         if user_seeking:
             threading.Event().wait(0.2)
@@ -232,7 +236,6 @@ def audio_thread():
         data = wf.readframes(chunk)
         if not data:
             break
-
         samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
         samples /= 32768.0  # scale to [-1.0, 1.0]
         if normalize_audio:
@@ -246,20 +249,25 @@ def audio_thread():
         samples = np.clip(samples * 32768, -32768, 32767).astype(np.int16)  # scale back to int16
 
         stream.write(samples.tobytes())
-
         current_frame = wf.tell()
+
     if looping and not skip_loop:
-        next_song()
+        print
+        root.after(0, next_song)
+    elif looping and skip_loop:
+        root.after(0, last_song)
+
     skip_loop = False
     stream.stop_stream()
     stream.close()
     wf.close()
+    print("closing stream.")
 
 def on_slider_change(frame):
     global current_frame, user_seeking,WAV_FILE
     if WAV_FILE:
         temp=WAV_FILE
-        print(speed)
+        print(f"speed: {speed}")
         if speed!=1.0:
             temp = fast_speed_change(temp, speed)
         wf = wave.open(temp, 'rb')
@@ -314,7 +322,6 @@ def on_speed(speed_val):
         skip_loop = True
         on_play(restart=False)
 
-    
 
 def on_play(restart=True,appendToHistory=True):
     global running, current_frame, user_seeking,shuffle,WAV_FILE,looping,historyPosition
@@ -340,7 +347,7 @@ def on_play(restart=True,appendToHistory=True):
             pass
     # Stop current playback if running
     running = False
-    threading.Event().wait(0.25)  # Slight delay for previous thread to exit
+    threading.Event().wait(0.5)  # Slight delay for previous thread to exit
 
     # Reset playback position and slider state
     if restart:
@@ -348,7 +355,7 @@ def on_play(restart=True,appendToHistory=True):
         user_seeking = True   # Temporarily stop slider updates
         scan_slider.set(0)
         historyPosition+=1
-    print(historyPosition)
+    print(f"historyPosition: {historyPosition}")
 
     user_seeking = False  # Resume updates
     global slider_update_id
@@ -359,21 +366,20 @@ def on_play(restart=True,appendToHistory=True):
     # Start new playback
     running = True
     threading.Thread(target=audio_thread, daemon=True).start()
-    #threading.Thread(target=audio_thread, daemon=True).start()
 
 def on_close():
     global running, WAV_FILE, delete_temp_wav_files
     running = False
-    threading.Event().wait(0.2)
+    threading.Event().wait(0.3)
     print()
-    files = [f for f in os.listdir(file_dir) if f.endswith("mp3.convertedTo.wav")]
+    files = [f for f in os.listdir(converted_files_path)]#if f.endswith("mp3.convertedTo.wav")]
     # Delete the converted .wav file if it exists
     if delete_temp_wav_files:
         os.remove(audioMapPath)
         for f in files:
-            if os.path.exists(os.path.join(file_dir,f)):
+            if os.path.exists(os.path.join(converted_files_path,f)):
                 try:
-                    os.remove(os.path.join(file_dir,f))
+                    os.remove(os.path.join(converted_files_path,f))
                     print(f"Deleted temporary file: {f}")
                 except Exception as e:
                     print(f"Failed to delete {f}: {e}")
@@ -398,7 +404,7 @@ def on_normalize(val):
     target_dBFS = val
 
 def sync_tk_states():
-    global web_speed_change,speed
+    global web_speed_change,speed, volume, bass_gain, treble_gain, current_frame, target_dBFS
     with state_lock:
         volume_slider.set(volume)
         bass_slider.set(bass_gain)
@@ -562,7 +568,7 @@ tk.Label(root, text="Volume").pack(pady=(4, 0))
 # Bass
 
 bass_slider = tk.Scale(root, from_=-15, to=15, resolution=1,
-                       orient="horizontal",length=300, command=on_bass)
+        orient="horizontal",length=300, command=on_bass)
 bass_slider.set(0)
 bass_slider.pack()
 tk.Label(root, text="Bass Boost (dB)").pack(pady=(4, 0))
