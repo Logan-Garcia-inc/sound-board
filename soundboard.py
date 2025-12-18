@@ -58,6 +58,7 @@ historyPosition=-1
 target_dBFS=-25.0
 normalize_audio=False
 web_speed_change=False
+thread_id=0
 state_lock = threading.Lock()
 
 # --- WAV File ---
@@ -193,8 +194,8 @@ def normalize_rms(samples):
     # Apply gain
     return samples * gain
 
-def audio_thread():
-    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE,skip_loop, history, current_frame,looping
+def audio_thread(my_id):
+    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE,skip_loop, history, current_frame,looping,thread_id
     if (WAV_FILE[-4:]==".mp3"):
         WAV_FILE=convert_mp3_to_wav(WAV_FILE)
     wf = wave.open(WAV_FILE, 'rb')
@@ -228,6 +229,13 @@ def audio_thread():
 
     update_slider()
     while current_frame < total_frames and running:
+        if my_id != thread_id:
+            skip_loop = False
+            stream.stop_stream()
+            stream.close()
+            wf.close()
+            print("closing stream.")
+            return
         if user_seeking:
             threading.Event().wait(0.2)
             continue
@@ -245,14 +253,11 @@ def audio_thread():
 
         samples = biquad_shelf(samples, rate, bass_gain, 200, "low")
         samples = biquad_shelf(samples, rate, treble_gain, 4000, "high")
-        
         samples = np.clip(samples * 32768, -32768, 32767).astype(np.int16)  # scale back to int16
-
         stream.write(samples.tobytes())
         current_frame = wf.tell()
 
     if looping and not skip_loop:
-        print
         root.after(0, next_song)
     elif looping and skip_loop:
         root.after(0, last_song)
@@ -324,7 +329,7 @@ def on_speed(speed_val):
 
 
 def on_play(restart=True,appendToHistory=True):
-    global running, current_frame, user_seeking,shuffle,WAV_FILE,looping,historyPosition
+    global running, current_frame, thread_id, user_seeking,shuffle,WAV_FILE,looping,historyPosition
     print(f"Shuffling: {shuffle}, looping: {looping}\n")
     if selected_device_index is None:
         print("No output device selected.")
@@ -365,7 +370,9 @@ def on_play(restart=True,appendToHistory=True):
 
     # Start new playback
     running = True
-    threading.Thread(target=audio_thread, daemon=True).start()
+    thread_id+=1
+    id=thread_id
+    threading.Thread(target=audio_thread,args=(id,), daemon=True).start()
 
 def on_close():
     global running, WAV_FILE, delete_temp_wav_files
