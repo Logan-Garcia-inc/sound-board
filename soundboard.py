@@ -253,9 +253,7 @@ def audio_thread(my_id):
 
         samples = biquad_shelf(samples, rate, bass_gain, 200, "low")
         samples = biquad_shelf(samples, rate, treble_gain, 4000, "high")
-        
         samples = np.clip(samples * 32768, -32768, 32767).astype(np.int16)  # scale back to int16
-
         stream.write(samples.tobytes())
         current_frame = wf.tell()
 
