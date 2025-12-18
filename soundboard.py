@@ -258,7 +258,6 @@ def audio_thread(my_id):
         current_frame = wf.tell()
 
     if looping and not skip_loop:
-        print
         root.after(0, next_song)
     elif looping and skip_loop:
         root.after(0, last_song)
