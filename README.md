@@ -2,7 +2,7 @@
 **step 1**
 open a command console in the folder 
 
-**step 2 **
+**step 2**
 pip install -r requirements.txt
 
 **step 3**
