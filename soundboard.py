@@ -157,9 +157,9 @@ def next_song():
     print("Next")
     global shuffle,WAV_FILE,historyPosition, looping,history,running
     append=False
-    if looping and WAV_FILE and running:
-        running=False
-        return
+    # if looping and WAV_FILE and running:
+    #     running=False
+    #     return
     print(f"{historyPosition}, {len(history)}")
     if historyPosition < len(history)-1:     #[song1, song2, _song3_] length=3 pos=2
         song=history[historyPosition+1]
@@ -177,9 +177,9 @@ def last_song():
     historyPosition-=2
     print("Playing Previous song...")
     WAV_FILE=song
-    if looping and WAV_FILE and running:
-        running=False
-        return
+    # if looping and WAV_FILE and running:
+    #     running=False
+    #     return
     on_play(appendToHistory=False)
 
 # --- Audio Thread ---
@@ -272,6 +272,7 @@ def audio_thread(my_id):
     stream.stop_stream()
     stream.close()
     wf.close()
+    thread_id+=1
     print("closing stream.")
 
 def on_slider_change(frame):
@@ -376,7 +377,6 @@ def on_play(restart=True,appendToHistory=True):
 
     # Start new playback
     running = True
-    thread_id+=1
     id=thread_id
     threading.Thread(target=audio_thread,args=(id,), daemon=True).start()
 
