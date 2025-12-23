@@ -68,14 +68,14 @@ p = pyaudio.PyAudio()
 
 def convert_mp3_to_wav(mp3_file_path):
     global audioMapPath, audioMap,converted_files_path
-    try:
-        if mp3_file_path in audioMap.keys():
-            wav_file_path=audioMap[mp3_file_path]
+    
+    if mp3_file_path in audioMap.keys():
+        wav_file_path=audioMap[mp3_file_path]
+        if os.path.exists(wav_file_path):
             return wav_file_path
-    except IndexError as e:
-        audioMap={}
-        os.remove(audioMapPath)
-        print(e)
+        else:
+            audioMap={}
+            os.remove(audioMapPath)
 
     if not os.path.exists(converted_files_path):
         os.mkdir(converted_files_path)
