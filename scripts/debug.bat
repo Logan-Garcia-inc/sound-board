@@ -1,3 +1,4 @@
 @echo off
-python main.py
+chdir ../
+python soundboard.py
 pause
