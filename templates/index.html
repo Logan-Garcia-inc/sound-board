@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>LAN Soundboard</title>
     <style>
-        body { font-family: sans-serif; 
-            background: #111; 
+        body {
+            font-family: sans-serif;
+            background: #111;
             color: #fff;
-         }
+        }
+
         button {
             margin: 12px;
             padding: 15px;
@@ -15,6 +18,7 @@
             background-color: #b31bb3;
             border-radius: 6%;
         }
+
         .sounds {
             justify-content: center;
             display: flex;
@@ -23,77 +27,122 @@
         }
     </style>
 </head>
+
 <body>
-    
-    
-        <h1>Sounds</h1>
-    <div class ="sounds">
-    {% for sound in sounds %}
-        <button onclick="play('{{ sound }}')">{{ sound }}</button>
-    {% endfor %}
+
+
+    <h1>Sounds</h1>
+    <input type="text" id="searchInput" placeholder="Search sounds..." oninput="filterSounds()">
+    <div class="sounds">
+        {% for sound in sounds %}
+        <button class="soundBtn" onclick="play('{{ sound }}')">{{ sound }}</button>
+        {% endfor %}
     </div>
 
-<div class="sliderContainer">
-<h1>   Options</h1>
-<a>Volume</a> <input class="slider volSlider" step="0.01" type="range" min="0.00" max="3.00" value="1" oninput="set_state('set_volume',this.value)">
-<a>Bass</a> <input class="slider bassSlider" step="0.01" type="range" min="-15" max="15" value="0" oninput="set_state('set_bass',this.value)">
-<a>Treble</a> <input class="slider trebleSlider" step="0.01" type="range" min="-12" max="12" value="0" oninput="set_state('set_treble',this.value)">
-<a>Speed</a> <input class="slider speedSlider" step="0.01" type="range" min="0.50" max="3" value="1" onchange="set_state('set_speed', this.value)">
-<a>Scan</a> <input class="slider scanSlider" step="0.01" type="range" min="0" max="100" value="0" oninput="set_state('set_scan',this.value)">
-<a>Normalize Strength</a> <input class="slider normalizeSlider" step="0.01" type="range" min="-40" max="0" value="50" oninput="set_state('set_normalize_val',this.value)">
-<br>
-<button class="optionbtn shuffle" onclick="set_state('shuffle')">Shuffle</button>
-<button class="optionbtn looping" onclick="set_state('loop')">Looping</button>
-<button class="optionbtn normalize" onclick="set_state('normalize')">Normalize</button>
-<button class="optionbtn previous" onclick="set_state('previous')">Previous song</button>
-<button class="optionbtn stop" onclick="set_state('stop')">Stop</button>
-<button class="optionbtn next" onclick="set_state('next')">Next song</button>
-<a>Currently Playing: <span id="currentPlaying">None</span></a>
-</div>
+    <div class="sliderContainer">
+        <h1> Options</h1>
+        <a>Volume</a> <input class="slider volSlider" step="0.01" type="range" min="0.00" max="3.00" value="1"
+            oninput="set_state('set_volume',this.value)">
+        <a>Bass</a> <input class="slider bassSlider" step="0.01" type="range" min="-15" max="15" value="0"
+            oninput="set_state('set_bass',this.value)">
+        <a>Treble</a> <input class="slider trebleSlider" step="0.01" type="range" min="-12" max="12" value="0"
+            oninput="set_state('set_treble',this.value)">
+        <a>Speed</a> <input class="slider speedSlider" step="0.01" type="range" min="0.50" max="3" value="1"
+            onchange="set_state('set_speed', this.value)">
+        <a>Scan</a> <input class="slider scanSlider" step="0.01" type="range" min="0" max="100" value="0"
+            oninput="set_state('set_scan',this.value)">
+        <a>Normalize Strength</a> <input class="slider normalizeSlider" step="0.01" type="range" min="-40" max="0"
+            value="50" oninput="set_state('set_normalize_val',this.value)">
+        <br>
+        <button class="optionbtn shuffle" onclick="set_state('shuffle')">Shuffle</button>
+        <button class="optionbtn looping" onclick="set_state('loop')">Looping</button>
+        <button class="optionbtn normalize" onclick="set_state('normalize')">Normalize</button>
+        <button class="optionbtn previous" onclick="set_state('previous')">Previous song</button>
+        <button class="optionbtn stop" onclick="set_state('stop')">Stop</button>
+        <button class="optionbtn next" onclick="set_state('next')">Next song</button>
+        <a>Currently Playing: <span id="currentPlaying">None</span></a>
+    </div>
 </body>
 
 <script defer>
     tempSliders = document.querySelectorAll(".slider");
-    sliders=[];
-    for (let i=0; i<tempSliders.length; i++) {
+    sliders = [];
+    for (let i = 0; i < tempSliders.length; i++) {
         //console.log(tempSliders[i].classList[1]);
-        sliders[tempSliders[i].classList[1]]=tempSliders[i];
-}
+        sliders[tempSliders[i].classList[1]] = tempSliders[i];
+    }
     //console.log(sliders)
 
     tempBtns = document.querySelectorAll(".optionbtn");
-    optionBtns={};
+    optionBtns = {};
     tempBtns.forEach(element => {
-        optionBtns[element.classList[1]]=element;
+        optionBtns[element.classList[1]] = element;
     })
 
-function set_state(val,state) {
-    fetch(`/${val}`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ value: state })
-    });
-}
+    function set_state(val, state) {
+        fetch(`/${val}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ value: state })
+        });
+    }
     function play(sound) {
-            fetch(`/play/${sound}`);
-        }
+        fetch(`/play/${sound}`);
+    }
 
     setInterval(() => {
-    fetch("/state")
-        .then(r => r.json())
-        .then(s => {
-            sliders["volSlider"].value=s.volume;
-            sliders["bassSlider"].value=s.bass_gain;
-            sliders["trebleSlider"].value=s.treble_gain;
-            sliders["speedSlider"].value=s.speed;
-            sliders["scanSlider"].value=s.current_frame;
-            sliders["normalizeSlider"].value=s.normalize_strength;
-            optionBtns["shuffle"].style.backgroundColor = s.shuffle ? "green" : "red";
-            optionBtns["looping"].style.backgroundColor = s.looping ? "green" : "red";
-            optionBtns["normalize"].style.backgroundColor = s.normalize ? "green" : "red";
-            document.getElementById("currentPlaying").innerText = s.currently_playing ? s.currently_playing : "None";
+        fetch("/state")
+            .then(r => r.json())
+            .then(s => {
+                sliders["volSlider"].value = s.volume;
+                sliders["bassSlider"].value = s.bass_gain;
+                sliders["trebleSlider"].value = s.treble_gain;
+                sliders["speedSlider"].value = s.speed;
+                sliders["scanSlider"].value = s.current_frame;
+                sliders["normalizeSlider"].value = s.normalize_strength;
+                optionBtns["shuffle"].style.backgroundColor = s.shuffle ? "green" : "red";
+                optionBtns["looping"].style.backgroundColor = s.looping ? "green" : "red";
+                optionBtns["normalize"].style.backgroundColor = s.normalize ? "green" : "red";
+                document.getElementById("currentPlaying").innerText = s.currently_playing ? s.currently_playing : "None";
+
+            }, 350);
+    })
+    function filterSounds(){
+        console.log("filtering sounds")
+        let list = []
+        const searchInput = document.getElementById('searchInput').value;
+        const options = {
+            keys: [],
+            threshold: 0.5,
+        };
+        for (let i = 0; i < document.getElementsByClassName('soundBtn').length; i++) {
+            list.push(document.getElementsByClassName('soundBtn')[i].innerText);
+        }
+        if (!searchInput){
+            for (let i = 0; i < document.getElementsByClassName("soundBtn").length; i++) {
+            const element = document.getElementsByClassName("soundBtn")[i];
             
-}, 350);
-})
-    </script>
+                element.style.display = "inline-block";
+                console.log("show", element.innerText);
+                
+        }return}
+
+        console.log(list);
+        const fuse = new Fuse(list, options)
+        const result = fuse.search(searchInput);
+        console.log(result);    
+        for (let i = 0; i < document.getElementsByClassName("soundBtn").length; i++) {
+            const element = document.getElementsByClassName("soundBtn")[i];
+            if (result.some(item => item.item === element.innerText)) {
+                element.style.display = "inline-block";
+                console.log("show", element.innerText);
+            } else {
+                element.style.display = "none";
+                console.log("hide", element.innerText);
+            }
+        };
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.js"></script>
+
 </html>
