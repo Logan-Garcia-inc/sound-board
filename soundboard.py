@@ -13,7 +13,8 @@ except Exception as e:
     print(e)
 
 print(f"Audio folder: {AUDIO_FOLDER}")
-from flask import Flask, render_template, send_from_directory, request, jsonify
+from flask import Flask, render_template, send_from_directory, request, jsonify       
+import logging
 import io
 import random
 import wave
@@ -236,6 +237,7 @@ def audio_thread(my_id):
 
     update_slider()
     while current_frame < total_frames and running:
+        print(thread_id, my_id)
         if my_id != thread_id:
             skip_loop = False
             stream.stop_stream()
@@ -273,7 +275,7 @@ def audio_thread(my_id):
     stream.stop_stream()
     stream.close()
     wf.close()
-    thread_id+=1
+    print("Thread",my_id,"exiting.")
     print("closing stream.")
 
 def on_scan_change(frame):
@@ -378,6 +380,7 @@ def on_play(restart=True,appendToHistory=True):
 
     # Start new playback
     running = True
+    thread_id+=1
     id=thread_id
     threading.Thread(target=audio_thread,args=(id,), daemon=True).start()
 
@@ -528,19 +531,17 @@ def web_normalize():
     return "OK"
 
 @app.route("/next", methods=["POST"])
-def next():
-    with state_lock:
-        next_song()
+def web_next():
+    next_song()
     return "OK"
 
-@app.route("/last", methods=["POST"])
-def previous():
-    with state_lock:
-        last_song()
+@app.route("/previous", methods=["POST"])
+def web_previous():
+    last_song()
     return "OK"
 
 @app.route("/state")
-def get_state():
+def web_get_state():
     global volume, bass_gain, treble_gain, speed, shuffle, looping, target_dBFS, normalize_audio, current_frame,WAV_FILE
     with state_lock:
         state = {
@@ -655,7 +656,10 @@ if os.path.exists(audioMapPath):
 else:
     open(audioMapPath, "a").close()
     audioMap={}
-        
+ 
+# Disable Werkzeug request logging
+log = logging.getLogger('werkzeug')
+log.disabled = True
 
 sync_tk_states()
 root.protocol("WM_DELETE_WINDOW", on_close)
