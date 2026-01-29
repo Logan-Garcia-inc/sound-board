@@ -1,6 +1,6 @@
 import os
 AUDIO_FOLDER= os.path.expanduser("~")+"\\music"
-                #<------important white space
+              #<------important white space
 try:
     if not AUDIO_FOLDER:
         AUDIO_FOLDER=input("Path to audio folder: ")
@@ -42,6 +42,7 @@ volume = 0.5
 bass_gain = 0.0
 treble_gain = 0.0
 current_frame = 0
+total_frames = 1
 speed = 1.0
 scan_slider = None
 user_seeking = False
@@ -52,7 +53,7 @@ shuffle=False
 looping=False
 skip_loop = False
 audioMapPath="audioMap.json"
-delete_temp_wav_files=False
+delete_temp_wav_files=True
 history=[]
 historyPosition=-1
 target_dBFS=-25.0
@@ -201,7 +202,7 @@ def normalize_rms(samples):
     return samples * gain
 
 def audio_thread(my_id):
-    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE,skip_loop, history, current_frame,looping,thread_id
+    global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE,skip_loop, history, current_frame,looping,thread_id,total_frames
     if (WAV_FILE[-4:]==".mp3"):
         WAV_FILE=convert_mp3_to_wav(WAV_FILE)
     wf = wave.open(WAV_FILE, 'rb')
@@ -227,9 +228,10 @@ def audio_thread(my_id):
     data = wf.readframes(chunk)
 
     def update_slider():
-        global slider_update_id, current_frame
+        global slider_update_id, current_frame,temp
         if not user_seeking:
-            scan_slider.set(current_frame * 100 / total_frames)
+            scan_percentage= current_frame * 100 / total_frames
+            scan_slider.set(scan_percentage)
             #print(current_frame * 100 / total_frames)
         slider_update_id = root.after(20, update_slider)  # ~50fps is plenty
 
@@ -275,7 +277,7 @@ def audio_thread(my_id):
     thread_id+=1
     print("closing stream.")
 
-def on_slider_change(frame):
+def on_scan_change(frame):
     global current_frame, user_seeking,WAV_FILE
     if WAV_FILE:
         temp=WAV_FILE
@@ -295,7 +297,7 @@ def on_scan_slider_start(event):
 def on_scan_slider_end(event):
     global user_seeking
     user_seeking = False
-    on_slider_change(scan_slider.get())
+    on_scan_change(scan_slider.get())
 
 
 # --- GUI Handlers ---
@@ -422,7 +424,9 @@ def sync_tk_states():
         volume_slider.set(volume)
         bass_slider.set(bass_gain)
         treble_slider.set(treble_gain)
-        scan_slider.set(current_frame)
+        if not user_seeking:
+            scan_slider.set(current_frame * 100 / total_frames)
+        #print("sync: ",current_frame, total_frames, current_frame * 100 / total_frames)
         normalizeSlider.set(target_dBFS)
         if web_speed_change:
             on_speed(speed)
@@ -488,7 +492,7 @@ def set_scan():
     data = request.json
     scan = float(data["value"])
     with state_lock:
-        on_slider_change(scan)
+        on_scan_change(scan)
     return jsonify(success=True)
 
 @app.route("/set_normalize_val", methods=["POST"])
@@ -614,7 +618,7 @@ for file in load_audio_files():
     file_listbox.insert(tk.END, file)
 
 tk.Label(root, text="Scan Audio").pack(pady=(4, 0))
-scan_slider = tk.Scale(root, from_=0, to=100,length=300, orient="horizontal")#, command=on_slider_change)
+scan_slider = tk.Scale(root, from_=0, to=100,length=300, orient="horizontal")#, command=on_scan_change)
 scan_slider.pack(fill="x", padx=10)
 
 # Bind mouse events to pause/resume seek
