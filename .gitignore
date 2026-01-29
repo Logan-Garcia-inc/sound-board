@@ -5,3 +5,4 @@ push.bat
 *.wav
 audioMap.json
 convertedFiles
+config

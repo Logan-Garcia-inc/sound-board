@@ -37,10 +37,10 @@ except ImportError as e:
 
 # --- Shared State ---
 file_dir = os.path.dirname(os.path.abspath(__file__))
-if os.path.exists(os.path.join(file_dir,"config","config.json")): 
+try:#if os.path.exists(os.path.join(file_dir,"config","config.json")): 
     with open(os.path.join(file_dir,"config","config.json"), "r") as f:
         config = json.loads(f.read())
-else:
+except Exception as e:
     with open(os.path.join(file_dir,"config","config.json"), "w") as f:
         config = {
             "audio_folder": AUDIO_FOLDER,
@@ -94,9 +94,10 @@ def convert_mp3_to_wav(mp3_file_path):
 
     if not os.path.exists(config["converted_files_path"]):
         os.mkdir(config["converted_files_path"])
-    wav_file_path = config["converted_files_path"]+os.path.basename(mp3_file_path) + ".convertedTo.wav"
+    wav_file_path = os.path.join(config["converted_files_path"],os.path.basename(mp3_file_path) + ".convertedTo.wav")
     sound = AudioSegment.from_mp3(mp3_file_path)
     sound.export(wav_file_path, format="wav")
+    print(wav_file_path)
     audioMap[mp3_file_path]=wav_file_path
     with open(config["audio_map_path"],"w") as file:
         file.write(json.dumps(audioMap))
@@ -664,11 +665,10 @@ previousBtn.pack(pady=8,side="left", padx=5)
 nextBtn = tk.Button(button_row, text="Next", command=lambda: next_song())
 nextBtn.pack(pady=8,side="left", padx=5)
 
-
-if os.path.exists(config["audio_map_path"]):
+try:
     with open(config["audio_map_path"], "r") as file:
         audioMap=json.loads(file.read())   
-else:
+except Exception as e:
     open(config["audio_map_path"], "a").close()
     audioMap={}
  
