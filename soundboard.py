@@ -158,18 +158,17 @@ def next_song():
     print("Next")
     global shuffle,WAV_FILE,historyPosition, looping,history,running
     append=False
-    # if looping and WAV_FILE and running:
+    # if looping and WAV_FILE and running:  #looping is handled in the audio thread to prevent multiple threads
     #     running=False
     #     return
     print(f"{historyPosition}, {len(history)}")
     if historyPosition < len(history)-1:     #[song1, song2, _song3_] length=3 pos=2
-        song=history[historyPosition+1]
+        WAV_FILE=history[historyPosition+1]
         print("Playing next song...")
     elif shuffle:
-        song = returnRandomSong()
+        WAV_FILE = returnRandomSong()
         print("Playing next random song...")
         append=True
-    WAV_FILE=song
     on_play(appendToHistory=append)
 
 def last_song():
@@ -267,7 +266,7 @@ def audio_thread(my_id):
 
     if looping and not skip_loop:
         root.after(0, next_song)
-    elif looping and skip_loop:
+    elif looping and skip_loop: #skip loop if speed was changed
         root.after(0, last_song)
 
     skip_loop = False
@@ -328,7 +327,7 @@ def on_device_select(event):
 def on_speed(speed_val):
     global skip_loop, speed
     speed_val=float(speed_val)
-    if abs(speed_val - 1.0) <= 0.02:
+    if abs(speed_val - 1.0) <= 0.02: #snap to 1.0
         speed_val = 1.0
         speed_slider.set(1.0)
     speed = speed_val
