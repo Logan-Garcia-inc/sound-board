@@ -13,32 +13,47 @@ except Exception as e:
     print(e)
 
 print(f"Audio folder: {AUDIO_FOLDER}")
-from flask import Flask, render_template, send_from_directory, request, jsonify       
-import logging
-import io
-import random
-import wave
-import ffmpeg
-#os.system("pip install ffmpeg-python")
-from pydub import AudioSegment
-from pydub.utils import which
-import json
-import pyaudio
-import numpy as np
-import threading
-import tkinter as tk
-from tkinter import ttk
-from scipy.signal import lfilter
-import librosa
-import soundfile as sf
+try:
+    from flask import Flask, render_template, send_from_directory, request, jsonify     
+    import logging
+    import io
+    import random
+    import wave
+    import ffmpeg
+    #os.system("pip install ffmpeg-python")
+    from pydub import AudioSegment
+    from pydub.utils import which
+    import json
+    import pyaudio
+    import numpy as np
+    import threading
+    import tkinter as tk
+    from tkinter import ttk
+    from scipy.signal import lfilter
+    import librosa
+    import soundfile as sf
+except ImportError as e:
+    print(e, "\n\nInstall requirements by runnnig 'pip install -r requirements.txt' in your terminal.")
 
 # --- Shared State ---
-
 file_dir = os.path.dirname(os.path.abspath(__file__))
-converted_files_path=file_dir+"\\convertedFiles\\"
+if os.path.exists(os.path.join(file_dir,"config","config.json")): 
+    with open(os.path.join(file_dir,"config","config.json"), "r") as f:
+        config = json.loads(f.read())
+else:
+    with open(os.path.join(file_dir,"config","config.json"), "w") as f:
+        config = {
+            "audio_folder": AUDIO_FOLDER,
+            "converted_files_path": os.path.join(file_dir,"convertedFiles"),
+            "ffmpeg_directory": os.path.join(file_dir,"scripts"),
+            "audio_map_path": os.path.join(file_dir,"config","audioMap.json"),
+            "delete_temp_wav_files": True
+        }
+        f.write(json.dumps(config))
 os.environ["PATH"] += os.pathsep + file_dir
-AudioSegment.converter =  os.path.join(file_dir, "scripts\\ffmpeg.exe")
-AudioSegment.ffprobe = os.path.join(file_dir, "scripts\\ffprobe.exe")
+AudioSegment.converter =  os.path.join(config["ffmpeg_directory"], "ffmpeg.exe")
+AudioSegment.ffprobe = os.path.join(config["ffmpeg_directory"], "ffprobe.exe")
+
 volume = 0.5
 bass_gain = 0.0
 treble_gain = 0.0
@@ -53,8 +68,6 @@ slider_update_id=None
 shuffle=False
 looping=False
 skip_loop = False
-audioMapPath="audioMap.json"
-delete_temp_wav_files=True
 history=[]
 historyPosition=-1
 target_dBFS=-25.0
@@ -69,7 +82,7 @@ WAV_FILE = None
 p = pyaudio.PyAudio()    
 
 def convert_mp3_to_wav(mp3_file_path):
-    global audioMapPath, audioMap,converted_files_path
+    global audioMap
     
     if mp3_file_path in audioMap.keys():
         wav_file_path=audioMap[mp3_file_path]
@@ -77,15 +90,15 @@ def convert_mp3_to_wav(mp3_file_path):
             return wav_file_path
         else:
             audioMap={}
-            os.remove(audioMapPath)
+            os.remove(config["audio_map_path"])
 
-    if not os.path.exists(converted_files_path):
-        os.mkdir(converted_files_path)
-    wav_file_path = converted_files_path+os.path.basename(mp3_file_path) + ".convertedTo.wav"
+    if not os.path.exists(config["converted_files_path"]):
+        os.mkdir(config["converted_files_path"])
+    wav_file_path = config["converted_files_path"]+os.path.basename(mp3_file_path) + ".convertedTo.wav"
     sound = AudioSegment.from_mp3(mp3_file_path)
     sound.export(wav_file_path, format="wav")
     audioMap[mp3_file_path]=wav_file_path
-    with open(audioMapPath,"w") as file:
+    with open(config["audio_map_path"],"w") as file:
         file.write(json.dumps(audioMap))
     #print(audioMap)
     return wav_file_path
@@ -228,7 +241,7 @@ def audio_thread(my_id):
     data = wf.readframes(chunk)
 
     def update_slider():
-        global slider_update_id, current_frame,temp
+        global slider_update_id, current_frame
         if not user_seeking:
             scan_percentage= current_frame * 100 / total_frames
             scan_slider.set(scan_percentage)
@@ -237,7 +250,7 @@ def audio_thread(my_id):
 
     update_slider()
     while current_frame < total_frames and running:
-        print(thread_id, my_id)
+        #print(thread_id, my_id)
         if my_id != thread_id:
             skip_loop = False
             stream.stop_stream()
@@ -385,18 +398,18 @@ def on_play(restart=True,appendToHistory=True):
     threading.Thread(target=audio_thread,args=(id,), daemon=True).start()
 
 def on_close():
-    global running, WAV_FILE, delete_temp_wav_files
+    global running, WAV_FILE
     running = False
     threading.Event().wait(0.3)
     print()
-    files = [f for f in os.listdir(converted_files_path)]#if f.endswith("mp3.convertedTo.wav")]
+    files = [f for f in os.listdir(config["converted_files_path"])]#if f.endswith("mp3.convertedTo.wav")]
     # Delete the converted .wav file if it exists
-    if delete_temp_wav_files:
-        os.remove(audioMapPath)
+    if config["delete_temp_wav_files"]:
+        os.remove(config["audio_map_path"])
         for f in files:
-            if os.path.exists(os.path.join(converted_files_path,f)):
+            if os.path.exists(os.path.join(config["converted_files_path"],f)):
                 try:
-                    os.remove(os.path.join(converted_files_path,f))
+                    os.remove(os.path.join(config["converted_files_path"],f))
                     print(f"Deleted temporary file: {f}")
                 except Exception as e:
                     print(f"Failed to delete {f}: {e}")
@@ -436,19 +449,20 @@ def sync_tk_states():
     root.after(50, sync_tk_states)
 
 app = Flask(__name__)
+
 @app.route("/")
 def index():
     return render_template("index.html", sounds=load_audio_files())
 
 @app.route("/play/<sound>")
-def on_web_play(sound):
+def on_app_play(sound):
     global WAV_FILE
     WAV_FILE=AUDIO_FOLDER+"\\"+sound
     on_play(restart=True)
     return("OK")
 
 @app.route("/stop", methods=["POST"])
-def on_web_stop():
+def on_app_stop():
     global running
     running=False
     return("OK")
@@ -481,9 +495,9 @@ def set_treble():
     return jsonify(success=True)
 
 @app.route("/set_speed", methods=["POST"])
-def web_set_speed():
-    global speed,web_speed_change
-    web_speed_change=True
+def app_set_speed():
+    global speed,app_speed_change
+    app_speed_change=True
     data = request.json
     speedVal = float(data["value"])
     with state_lock:
@@ -508,7 +522,7 @@ def set_normalize():
     return jsonify(success=True)
 
 @app.route("/shuffle", methods=["POST"])
-def web_shuffle():
+def app_shuffle():
     global shuffle
     data = request.json
     with state_lock:
@@ -516,7 +530,7 @@ def web_shuffle():
     return "OK"
 
 @app.route("/loop", methods=["POST"])
-def web_loop():
+def app_loop():
     global looping
     data = request.json
     with state_lock:
@@ -524,7 +538,7 @@ def web_loop():
     return "OK"
 
 @app.route("/normalize", methods=["POST"])
-def web_normalize():
+def app_normalize():
     global normalize_audio
     data = request.json
     with state_lock:
@@ -532,17 +546,17 @@ def web_normalize():
     return "OK"
 
 @app.route("/next", methods=["POST"])
-def web_next():
+def app_next():
     next_song()
     return "OK"
 
 @app.route("/previous", methods=["POST"])
-def web_previous():
+def app_previous():
     last_song()
     return "OK"
 
 @app.route("/state")
-def web_get_state():
+def app_get_state():
     global volume, bass_gain, treble_gain, speed, shuffle, looping, target_dBFS, normalize_audio, current_frame,WAV_FILE
     with state_lock:
         state = {
@@ -651,11 +665,11 @@ nextBtn = tk.Button(button_row, text="Next", command=lambda: next_song())
 nextBtn.pack(pady=8,side="left", padx=5)
 
 
-if os.path.exists(audioMapPath):
-    with open(audioMapPath, "r") as file:
+if os.path.exists(config["audio_map_path"]):
+    with open(config["audio_map_path"], "r") as file:
         audioMap=json.loads(file.read())   
 else:
-    open(audioMapPath, "a").close()
+    open(config["audio_map_path"], "a").close()
     audioMap={}
  
 # Disable Werkzeug request logging

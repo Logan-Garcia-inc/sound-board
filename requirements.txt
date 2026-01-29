@@ -4,7 +4,8 @@ pydub
 audioop-lts
 pyaudio
 numpy
-tkinter
 scipy
 librosa
 soundfile
+web_routes
+tkinter
