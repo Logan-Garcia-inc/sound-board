@@ -41,8 +41,12 @@
 
     <div class="sliderContainer">
         <h1> Options</h1>
-        <a>Volume</a> <input class="slider volSlider" step="0.01" type="range" min="0.00" max="3.00" value="1"
+        <span id="normDiv"><a>Normalize Strength</a> <input class="slider normalizeSlider" step="0.01" type="range" min="-40" max="0"
+            value="50" oninput="set_state('set_normalize_val',this.value)">
+            </span>
+        <span id="volDiv"><a>Volume</a> <input class="slider volSlider" step="0.01" type="range" min="0.00" max="3.00" value="1"
             oninput="set_state('set_volume',this.value)">
+            </span>
         <a>Bass</a> <input class="slider bassSlider" step="0.01" type="range" min="-15" max="15" value="0"
             oninput="set_state('set_bass',this.value)">
         <a>Treble</a> <input class="slider trebleSlider" step="0.01" type="range" min="-12" max="12" value="0"
@@ -51,8 +55,7 @@
             onchange="set_state('set_speed', this.value)">
         <a>Scan</a> <input class="slider scanSlider" step="0.01" type="range" min="0" max="100" value="0"
             oninput="set_state('set_scan',this.value)">
-        <a>Normalize Strength</a> <input class="slider normalizeSlider" step="0.01" type="range" min="-40" max="0"
-            value="50" oninput="set_state('set_normalize_val',this.value)">
+        
         <br>
         <button class="optionbtn shuffle" onclick="set_state('shuffle')">Shuffle</button>
         <button class="optionbtn looping" onclick="set_state('loop')">Looping</button>
@@ -98,14 +101,20 @@
                 sliders["bassSlider"].value = s.bass_gain;
                 sliders["trebleSlider"].value = s.treble_gain;
                 sliders["speedSlider"].value = s.speed;
-                sliders["scanSlider"].value = s.current_frame;
+                sliders["scanSlider"].value = s.scan_percent;
                 sliders["normalizeSlider"].value = s.normalize_strength;
                 optionBtns["shuffle"].style.backgroundColor = s.shuffle ? "green" : "red";
                 optionBtns["looping"].style.backgroundColor = s.looping ? "green" : "red";
                 optionBtns["normalize"].style.backgroundColor = s.normalize ? "green" : "red";
                 document.getElementById("currentPlaying").innerText = s.currently_playing ? s.currently_playing : "None";
-
-            }, 350);
+                if (s.normalize){
+                    document.getElementById("normDiv").style.display = "inline-block";
+                    document.getElementById("volDiv").style.display = "none";
+             } else{
+                    document.getElementById("volDiv").style.display = "inline-block";
+                    document.getElementById("normDiv").style.display = "none";
+                }
+            }, 500);
     })
     function filterSounds(){
         console.log("filtering sounds")

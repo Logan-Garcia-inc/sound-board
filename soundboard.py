@@ -331,8 +331,8 @@ def on_speed(speed_val):
     speed_val=float(speed_val)
     if abs(speed_val - 1.0) <= 0.02: #snap to 1.0
         speed_val = 1.0
-        speed_slider.set(1.0)
     speed = speed_val
+    speed_slider.set(speed_val)
     if running:
         skip_loop = True
         on_play(restart=False)
@@ -482,7 +482,8 @@ def set_treble():
 
 @app.route("/set_speed", methods=["POST"])
 def web_set_speed():
-    global speed
+    global speed,web_speed_change
+    web_speed_change=True
     data = request.json
     speedVal = float(data["value"])
     with state_lock:
@@ -553,7 +554,7 @@ def web_get_state():
             "looping": looping,
             "normalize_strength": target_dBFS,
             "normalize": normalize_audio,
-            "current_frame": current_frame,
+            "scan_percent": current_frame *100 / total_frames,
             "currently_playing": os.path.basename(WAV_FILE).split(".")[0]
         }
         return jsonify(state)
