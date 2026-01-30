@@ -1,18 +1,4 @@
 import os
-AUDIO_FOLDER= os.path.expanduser("~")+"\\music"
-              #<------important white space
-try:
-    if not AUDIO_FOLDER:
-        AUDIO_FOLDER=input("Path to audio folder: ")
-        with open(os.path.abspath(__file__),"r") as file:
-            lines = file.readlines()
-        with open(os.path.abspath(__file__),"w") as file:
-            lines[2] =  f'AUDIO_FOLDER = "{AUDIO_FOLDER}"' +'\n'
-            file.writelines(lines)
-except Exception as e:
-    print(e)
-
-print(f"Audio folder: {AUDIO_FOLDER}")
 try:
     from flask import Flask, render_template, send_from_directory, request, jsonify     
     import logging
@@ -32,28 +18,35 @@ try:
     from scipy.signal import lfilter
     import librosa
     import soundfile as sf
+    from yt_dlp import YoutubeDL
 except ImportError as e:
     print(e, "\n\nInstall requirements by runnnig 'pip install -r requirements.txt' in your terminal.")
 
 # --- Shared State ---
 file_dir = os.path.dirname(os.path.abspath(__file__))
-try:#if os.path.exists(os.path.join(file_dir,"config","config.json")): 
+if not os.path.exists(os.path.join(file_dir,"config")):
+    os.mkdir(os.path.join(file_dir,"config"))
+
+try:
     with open(os.path.join(file_dir,"config","config.json"), "r") as f:
         config = json.loads(f.read())
 except Exception as e:
+    open(os.path.join(file_dir,"config","config.json"), "a").close()
     with open(os.path.join(file_dir,"config","config.json"), "w") as f:
         config = {
-            "audio_folder": AUDIO_FOLDER,
+            "audio_folder": os.path.expanduser("~")+"\\music",
             "converted_files_path": os.path.join(file_dir,"convertedFiles"),
             "ffmpeg_directory": os.path.join(file_dir,"scripts"),
             "audio_map_path": os.path.join(file_dir,"config","audioMap.json"),
-            "delete_temp_wav_files": True
+            "delete_temp_wav_files": True,
+            "downloads_path": os.path.join(file_dir,"downloads"),
+            "delete_downloaded_files": False
         }
         f.write(json.dumps(config))
+
 os.environ["PATH"] += os.pathsep + file_dir
 AudioSegment.converter =  os.path.join(config["ffmpeg_directory"], "ffmpeg.exe")
 AudioSegment.ffprobe = os.path.join(config["ffmpeg_directory"], "ffprobe.exe")
-
 volume = 0.5
 bass_gain = 0.0
 treble_gain = 0.0
@@ -83,7 +76,6 @@ p = pyaudio.PyAudio()
 
 def convert_mp3_to_wav(mp3_file_path):
     global audioMap
-    
     if mp3_file_path in audioMap.keys():
         wav_file_path=audioMap[mp3_file_path]
         if os.path.exists(wav_file_path):
@@ -106,10 +98,14 @@ def convert_mp3_to_wav(mp3_file_path):
 
 def load_audio_files():
     try:
-        files = [f for f in os.listdir(AUDIO_FOLDER) if (f.lower().endswith(".wav") or f.lower().endswith(".mp3"))]
+        files = [f for f in os.listdir(config["audio_folder"]) if (f.lower().endswith(".wav") or f.lower().endswith(".mp3"))]
+        for i in os.listdir(config["downloads_path"]):
+            if i.lower().endswith(".mp3") or i.lower().endswith(".wav"):
+                if i not in files:
+                    files.append(i)
         return files
     except FileNotFoundError:
-        print("\nAudio directory path not accessible: "+AUDIO_FOLDER)
+        print("\nAudio directory path not accessible: "+config["audio_folder"])
         threading.Event().wait(5)
 
 def on_file_select(event):
@@ -117,7 +113,7 @@ def on_file_select(event):
     selection = file_listbox.curselection()
     if selection:
         filename = file_listbox.get(selection[0])
-        WAV_FILE = os.path.join(AUDIO_FOLDER, filename)
+        WAV_FILE = os.path.join(config["audio_folder"], filename)
 
 def list_output_devices():
     devices = []
@@ -167,7 +163,7 @@ def fast_speed_change(file_path, speed):
     return buf
 
 def returnRandomSong():
-    return os.path.join(AUDIO_FOLDER, random.choice(load_audio_files()))
+    return os.path.join(config["audio_folder"], random.choice(load_audio_files()))
 
 def next_song():
     print("Next")
@@ -217,6 +213,8 @@ def normalize_rms(samples):
 
 def audio_thread(my_id):
     global running, volume, bass_gain, treble_gain, selected_device_index,WAV_FILE,skip_loop, history, current_frame,looping,thread_id,total_frames
+    if os.path.isfile(os.path.join(config["downloads_path"], os.path.basename(WAV_FILE))):
+        WAV_FILE=os.path.join(config["downloads_path"],os.path.basename(WAV_FILE))
     if (WAV_FILE[-4:]==".mp3"):
         WAV_FILE=convert_mp3_to_wav(WAV_FILE)
     wf = wave.open(WAV_FILE, 'rb')
@@ -392,6 +390,10 @@ def on_play(restart=True,appendToHistory=True):
         root.after_cancel(slider_update_id)
         slider_update_id = None
 
+    items = file_listbox.get(0, tk.END)
+    index = items.index(WAV_FILE.split("\\")[-1])
+    file_listbox.selection_set(index)
+
     # Start new playback
     running = True
     thread_id+=1
@@ -403,15 +405,27 @@ def on_close():
     running = False
     threading.Event().wait(0.3)
     print()
-    files = [f for f in os.listdir(config["converted_files_path"])]#if f.endswith("mp3.convertedTo.wav")]
+    files = [f for f in os.listdir(config["converted_files_path"])]
+    path=config["converted_files_path"]
     # Delete the converted .wav file if it exists
     if config["delete_temp_wav_files"]:
         os.remove(config["audio_map_path"])
         for f in files:
-            if os.path.exists(os.path.join(config["converted_files_path"],f)):
+            if os.path.exists(os.path.join(path,f)):
                 try:
-                    os.remove(os.path.join(config["converted_files_path"],f))
+                    os.remove(os.path.join(path,f))
                     print(f"Deleted temporary file: {f}")
+                except Exception as e:
+                    print(f"Failed to delete {f}: {e}")
+
+    files = [f for f in os.listdir(config["downloads_path"])]
+    if config["delete_downloaded_files"]:
+        os.remove(path)
+        for f in files:
+            if os.path.exists(os.path.join(path,f)):
+                try:
+                    os.remove(os.path.join(path,f))
+                    print(f"Deleted downloaded file: {f}")
                 except Exception as e:
                     print(f"Failed to delete {f}: {e}")
 
@@ -458,8 +472,37 @@ def index():
 @app.route("/play/<sound>")
 def on_app_play(sound):
     global WAV_FILE
-    WAV_FILE=AUDIO_FOLDER+"\\"+sound
+    WAV_FILE=os.path.join(config["audio_folder"], sound)
     on_play(restart=True)
+    return("OK")
+
+@app.route("/download/", methods=["POST"])
+def youtube_download():
+    if os.path.exists("downloads")==False:
+        os.mkdir("downloads")
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+        'outtmpl': 'downloads/%(title)s.%(ext)s',
+        'noplaylist': True,
+    }
+    link = request.get_json()["link"]
+    print(link)
+    if "youtube.com" in link or "youtu.be" in link:
+        try:
+            with YoutubeDL(ydl_opts) as ydl:
+                ydl.download([link])
+            print(f"Successfully downloaded MP3 from: {link}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    file_listbox.delete(0, tk.END)
+    for file in load_audio_files():
+        file_listbox.insert(tk.END, file)
     return("OK")
 
 @app.route("/stop", methods=["POST"])

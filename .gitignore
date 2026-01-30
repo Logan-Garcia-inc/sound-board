@@ -3,6 +3,8 @@
 !.vscode/launch.json
 push.bat
 *.wav
+*.mp3
 audioMap.json
 convertedFiles
+downloads
 config
