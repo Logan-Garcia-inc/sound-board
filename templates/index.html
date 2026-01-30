@@ -37,8 +37,9 @@
         {% for sound in sounds %}
         <button class="soundBtn" onclick="play('{{ sound }}')">{{ sound }}</button>
         {% endfor %}
-    </div>
-
+    </div><br><br>
+    <input type="text" id="downloadInput" placeholder="Enter Youtube link to download">
+    <button id="downloadBtn" onclick="download()">Download MP3</button>
     <div class="sliderContainer">
         <h1> Options</h1>
         <span id="normDiv"><a>Normalize Strength</a> <input class="slider normalizeSlider" step="0.01" type="range" min="-40" max="0"
@@ -81,7 +82,8 @@
     tempBtns.forEach(element => {
         optionBtns[element.classList[1]] = element;
     })
-
+    downloadInput=document.getElementById("downloadInput");
+    downloadBtn=document.getElementById("downloadBtn");
     function set_state(val, state) {
         fetch(`/${val}`, {
             method: "POST",
@@ -93,6 +95,20 @@
         fetch(`/play/${sound}`);
     }
 
+    function download() {
+        link=downloadInput.value;
+        downloadBtn.disabled=true;
+        downloadBtn.innerText="Downloading..."
+        fetch(`/download/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ link:link })
+        }).then(() => {
+            downloadBtn.disabled=false;
+            downloadBtn.innerText="Download MP3"
+            downloadInput.value="";
+        });
+    }
     setInterval(() => {
         fetch("/state")
             .then(r => r.json())
