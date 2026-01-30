@@ -391,7 +391,10 @@ def on_play(restart=True,appendToHistory=True):
         slider_update_id = None
 
     items = file_listbox.get(0, tk.END)
-    index = items.index(WAV_FILE.split("\\")[-1])
+    name=WAV_FILE.split("\\")[-1]
+    originalName=name.replace(".convertedTo.wav","")
+    print(originalName)
+    index = items.index(originalName)
     file_listbox.selection_set(index)
 
     # Start new playback
