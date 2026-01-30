@@ -357,7 +357,7 @@ def on_play(restart=True,appendToHistory=True):
         print("No output device selected.")
         return
     if not WAV_FILE:
-        print("No audio file selected.")
+        print("No audio file selected.")           #when shuffleing and no song is selected
         if shuffle:
             print("Picking random...")
             WAV_FILE=returnRandomSong()
@@ -367,7 +367,7 @@ def on_play(restart=True,appendToHistory=True):
     if appendToHistory:
         try:
             if history[-1] != WAV_FILE:
-                history.append(WAV_FILE)
+                history.append(WAV_FILE)       #whether to append to the history or not
         except IndexError as e:
             history.append(WAV_FILE)
             #print(e)
@@ -379,7 +379,7 @@ def on_play(restart=True,appendToHistory=True):
     # Reset playback position and slider state
     if restart:
         current_frame = 0
-        user_seeking = True   # Temporarily stop slider updates
+        user_seeking = True      # Temporarily stop slider updates when seeking
         scan_slider.set(0)
         historyPosition+=1
     print(f"historyPosition: {historyPosition}")
@@ -392,10 +392,11 @@ def on_play(restart=True,appendToHistory=True):
 
     items = file_listbox.get(0, tk.END)
     name=WAV_FILE.split("\\")[-1]
-    originalName=name.replace(".convertedTo.wav","")
-    print(originalName)
+    originalName=os.path.basename(name.replace(".convertedTo.wav",""))   #scroll to the current song
     index = items.index(originalName)
+    file_listbox.selection_clear(0, tk.END)
     file_listbox.selection_set(index)
+    file_listbox.see(index)
 
     # Start new playback
     running = True
