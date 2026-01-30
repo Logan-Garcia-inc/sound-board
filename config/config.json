@@ -1,7 +1,1 @@
-{
-    "audio_folder": "C:\\Users\\Logan Garcia\\music",
-    "converted_files_path": "C:\\Users\\Logan Garcia\\Documents\\code\\sound-board\\convertedFiles",
-    "ffmpeg_directory": "C:\\Users\\Logan Garcia\\Documents\\code\\sound-board\\scripts",
-    "audio_map_path": "C:\\Users\\Logan Garcia\\Documents\\code\\sound-board\\config\\audioMap.json",
-    "delete_temp_wav_files": true
-}
+{"audio_folder": "C:\\Users\\Logan Garcia\\music", "converted_files_path": "C:\\Users\\Logan Garcia\\Documents\\code\\sound-board\\convertedFiles", "ffmpeg_directory": "C:\\Users\\Logan Garcia\\Documents\\code\\sound-board\\scripts", "audio_map_path": "C:\\Users\\Logan Garcia\\Documents\\code\\sound-board\\config\\audioMap.json", "delete_temp_wav_files": true, "downloads_path": "C:\\Users\\Logan Garcia\\Documents\\code\\sound-board\\downloads", "delete_downloaded_files": false}
