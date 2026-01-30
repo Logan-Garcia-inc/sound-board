@@ -89,6 +89,7 @@ def convert_mp3_to_wav(mp3_file_path):
     wav_file_path = os.path.join(config["converted_files_path"],os.path.basename(mp3_file_path) + ".convertedTo.wav")
     sound = AudioSegment.from_mp3(mp3_file_path)
     sound.export(wav_file_path, format="wav")
+    print(wav_file_path)
     audioMap[mp3_file_path]=wav_file_path
     with open(config["audio_map_path"],"w") as file:
         file.write(json.dumps(audioMap))
