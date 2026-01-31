@@ -20,7 +20,7 @@ try:
     import soundfile as sf
     from yt_dlp import YoutubeDL
 except ImportError as e:
-    print(e, "\n\nInstall requirements by runnnig 'pip install -r requirements.txt' in your terminal.")
+    print(e, "\n\nInstall requirements by running 'pip install -r requirements.txt' in your terminal.")
 
 # --- Shared State ---
 file_dir = os.path.dirname(os.path.abspath(__file__))
