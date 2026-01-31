@@ -10,3 +10,6 @@ run command:   pip install -r requirements.txt
 
 **step 3**
 run soundboard.py
+
+**step 4**
+edit config.json
