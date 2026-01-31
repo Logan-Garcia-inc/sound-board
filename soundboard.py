@@ -43,7 +43,9 @@ except Exception as e:
             "delete_downloaded_files": False
         }
         f.write(json.dumps(config))
-
+if os.path.exists("downloads")==False:
+    os.mkdir("downloads")
+    
 os.environ["PATH"] += os.pathsep + file_dir
 AudioSegment.converter =  os.path.join(config["ffmpeg_directory"], "ffmpeg.exe")
 AudioSegment.ffprobe = os.path.join(config["ffmpeg_directory"], "ffprobe.exe")
@@ -482,8 +484,6 @@ def on_app_play(sound):
 
 @app.route("/download/", methods=["POST"])
 def youtube_download():
-    if os.path.exists("downloads")==False:
-        os.mkdir("downloads")
     ydl_opts = {
         'format': 'bestaudio/best',
         'postprocessors': [{
