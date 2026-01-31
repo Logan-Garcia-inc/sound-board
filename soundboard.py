@@ -45,7 +45,8 @@ except Exception as e:
         f.write(json.dumps(config))
 if os.path.exists("downloads")==False:
     os.mkdir("downloads")
-    
+if not os.path.exists(config["converted_files_path"]):
+    os.mkdir(config["converted_files_path"])
 os.environ["PATH"] += os.pathsep + file_dir
 AudioSegment.converter =  os.path.join(config["ffmpeg_directory"], "ffmpeg.exe")
 AudioSegment.ffprobe = os.path.join(config["ffmpeg_directory"], "ffprobe.exe")
@@ -86,8 +87,7 @@ def convert_mp3_to_wav(mp3_file_path):
             audioMap={}
             os.remove(config["audio_map_path"])
 
-    if not os.path.exists(config["converted_files_path"]):
-        os.mkdir(config["converted_files_path"])
+
     wav_file_path = os.path.join(config["converted_files_path"],os.path.basename(mp3_file_path) + ".convertedTo.wav")
     sound = AudioSegment.from_mp3(mp3_file_path)
     sound.export(wav_file_path, format="wav")
