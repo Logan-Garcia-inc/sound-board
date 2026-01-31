@@ -5,6 +5,6 @@ push.bat
 *.wav
 *.mp3
 audioMap.json
-convertedFiles
-downloads
-config
+convertedFiles/
+downloads/
+config/
