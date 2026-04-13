@@ -66,6 +66,7 @@
         <button class="optionbtn next" onclick="set_state('next')">Next song</button>
         <a>Currently Playing: <span id="currentPlaying">None</span></a>
     </div>
+    <h4 href="https://github.com/Logan-Garcia-inc/sound-board">Source code</h4>
 </body>
 
 <script defer>
@@ -107,6 +108,7 @@
             downloadBtn.disabled=false;
             downloadBtn.innerText="Download MP3"
             downloadInput.value="";
+            window.location.reload()
         });
     }
     setInterval(() => {

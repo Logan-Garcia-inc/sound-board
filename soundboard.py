@@ -359,7 +359,7 @@ def on_play(restart=True,appendToHistory=True):
         print("No output device selected.")
         return
     if not WAV_FILE:
-        print("No audio file selected.")           #when shuffleing and no song is selected
+        print("No audio file selected.")           #when shuffling and no song is selected
         if shuffle:
             print("Picking random...")
             WAV_FILE=returnRandomSong()
